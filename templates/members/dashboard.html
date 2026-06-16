@@ -1,0 +1,224 @@
+{% extends 'base.html' %}
+
+{% block title %}My Dashboard — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+  <div class="row g-4">
+
+    <!-- LEFT COLUMN: profile + stats -->
+    <div class="col-lg-4">
+
+      <!-- Profile card -->
+      <div class="card p-4 mb-4 text-center">
+        <div class="mb-3">
+          {% if member.profile_photo %}
+            <img src="{{ member.profile_photo.url }}" class="rounded-circle" width="90" height="90" style="object-fit:cover;">
+          {% else %}
+            <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                 style="width:90px;height:90px;background:var(--chess-dark);font-size:2rem;color:var(--chess-gold);">
+              ♟
+            </div>
+          {% endif %}
+        </div>
+        <h5 class="fw-bold mb-0">{{ member.user.get_full_name|default:member.user.username }}</h5>
+        <p class="text-muted small mb-2">{{ member.association.name }}</p>
+        <span class="badge bg-light text-dark border mb-3">{{ member.get_role_display }}</span>
+
+        <div class="d-flex justify-content-center gap-4">
+          <div>
+            <div class="fw-bold" style="font-size:1.6rem;color:var(--chess-accent);">{{ member.rating }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">ELO Rating</div>
+          </div>
+          <div>
+            <div class="fw-bold" style="font-size:1.6rem;color:var(--chess-accent);">{{ stats.games_played }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">Games Played</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Win/Loss/Draw stats -->
+      <div class="card p-4 mb-4">
+        <h6 class="fw-bold mb-3">Performance</h6>
+        <div class="row text-center g-2 mb-3">
+          <div class="col-4">
+            <div class="fw-bold text-success" style="font-size:1.4rem;">{{ stats.wins }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">Wins</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold text-secondary" style="font-size:1.4rem;">{{ stats.draws }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">Draws</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold text-danger" style="font-size:1.4rem;">{{ stats.losses }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">Losses</div>
+          </div>
+        </div>
+
+        {% if stats.games_played > 0 %}
+          <!-- Win rate bar -->
+          <div class="mb-1 d-flex justify-content-between small text-muted">
+            <span>Win rate</span>
+            <span>{{ stats.win_rate }}%</span>
+          </div>
+          <div class="progress mb-3" style="height:8px;border-radius:8px;">
+            <div class="progress-bar bg-success" style="width:{{ stats.win_rate }}%;"></div>
+            <div class="progress-bar bg-secondary" style="width:{{ stats.draw_rate }}%;"></div>
+            <div class="progress-bar bg-danger" style="width:{{ stats.loss_rate }}%;"></div>
+          </div>
+          <div class="d-flex justify-content-between" style="font-size:0.7rem;color:#aaa;">
+            <span style="color:#198754;">■ Win {{ stats.win_rate }}%</span>
+            <span style="color:#6c757d;">■ Draw {{ stats.draw_rate }}%</span>
+            <span style="color:#dc3545;">■ Loss {{ stats.loss_rate }}%</span>
+          </div>
+        {% else %}
+          <p class="text-muted small mb-0 text-center">No games played yet.</p>
+        {% endif %}
+      </div>
+
+      <!-- Notifications -->
+      {% if notifications %}
+      <div class="card p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-bold mb-0">Notifications</h6>
+          <span class="badge bg-danger rounded-pill">{{ notifications|length }}</span>
+        </div>
+        <div class="d-flex flex-column gap-2">
+          {% for n in notifications %}
+          <div class="p-2 rounded" style="background:#f8f9fa;font-size:0.82rem;">
+            <div>{{ n.message }}</div>
+            <div class="text-muted mt-1" style="font-size:0.72rem;">{{ n.sent_at|date:"d M Y, H:i" }}</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- RIGHT COLUMN: tournaments + match history -->
+    <div class="col-lg-8">
+
+      <!-- My Tournaments -->
+      <div class="card p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-trophy"></i> My Tournaments</h5>
+
+        {% if registrations %}
+          <div class="d-flex flex-column gap-3">
+            {% for reg in registrations %}
+            <div class="d-flex justify-content-between align-items-center p-3 rounded" style="background:#f8f9fa;">
+              <div>
+                <div class="fw-semibold">{{ reg.tournament.name }}</div>
+                <div class="text-muted small">
+                  <i class="bi bi-geo-alt"></i> {{ reg.tournament.location }} &nbsp;·&nbsp;
+                  <i class="bi bi-calendar"></i> {{ reg.tournament.start_date|date:"d M Y" }}
+                </div>
+              </div>
+              <div class="text-end">
+                <div>
+                  <span class="badge rounded-pill text-white badge-status-{{ reg.tournament.status }} mb-1">
+                    {{ reg.tournament.get_status_display }}
+                  </span>
+                </div>
+                <span class="badge {% if reg.status == 'confirmed' %}bg-success{% elif reg.status == 'pending' %}bg-warning text-dark{% else %}bg-secondary{% endif %}">
+                  {{ reg.get_status_display }}
+                </span>
+                <div class="mt-1">
+                  <a href="/tournaments/{{ reg.tournament.pk }}/" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size:0.75rem;">View</a>
+                </div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-trophy" style="font-size:2rem;"></i>
+            <p class="mt-2 mb-2">You haven't registered for any tournaments yet.</p>
+            <a href="/tournaments/" class="btn btn-chess btn-sm">Browse Tournaments</a>
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Match History -->
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-clock-history"></i> Match History</h5>
+
+        {% if recent_matches %}
+          <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size:0.88rem;">
+              <thead class="table-light">
+                <tr>
+                  <th>Tournament</th>
+                  <th>Round</th>
+                  <th>Opponent</th>
+                  <th>Colour</th>
+                  <th>Result</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {% for match in recent_matches %}
+                  {% if match.white_player == member %}
+                    {% with colour="White" opponent=match.black_player %}
+                      <tr>
+                        <td>{{ match.tournament.name }}</td>
+                        <td>{{ match.round.number }}</td>
+                        <td>{{ opponent.user.get_full_name|default:opponent.user.username }}</td>
+                        <td><span class="badge bg-light text-dark border">♔ White</span></td>
+                        <td>
+                          {% if match.result == 'white_win' %}
+                            <span class="badge bg-success">Win</span>
+                          {% elif match.result == 'black_win' %}
+                            <span class="badge bg-danger">Loss</span>
+                          {% elif match.result == 'draw' %}
+                            <span class="badge bg-secondary">Draw</span>
+                          {% elif match.result == 'white_forfeit' %}
+                            <span class="badge bg-warning text-dark">Forfeit</span>
+                          {% else %}
+                            <span class="badge bg-light text-muted border">Pending</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-muted">{{ match.completed_at|date:"d M Y"|default:"—" }}</td>
+                      </tr>
+                    {% endwith %}
+                  {% else %}
+                    {% with colour="Black" opponent=match.white_player %}
+                      <tr>
+                        <td>{{ match.tournament.name }}</td>
+                        <td>{{ match.round.number }}</td>
+                        <td>{{ opponent.user.get_full_name|default:opponent.user.username }}</td>
+                        <td><span class="badge bg-dark text-white">♚ Black</span></td>
+                        <td>
+                          {% if match.result == 'black_win' %}
+                            <span class="badge bg-success">Win</span>
+                          {% elif match.result == 'white_win' %}
+                            <span class="badge bg-danger">Loss</span>
+                          {% elif match.result == 'draw' %}
+                            <span class="badge bg-secondary">Draw</span>
+                          {% elif match.result == 'black_forfeit' %}
+                            <span class="badge bg-warning text-dark">Forfeit</span>
+                          {% else %}
+                            <span class="badge bg-light text-muted border">Pending</span>
+                          {% endif %}
+                        </td>
+                        <td class="text-muted">{{ match.completed_at|date:"d M Y"|default:"—" }}</td>
+                      </tr>
+                    {% endwith %}
+                  {% endif %}
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        {% else %}
+          <div class="text-center py-4 text-muted">
+            <i class="bi bi-controller" style="font-size:2rem;"></i>
+            <p class="mt-2 mb-0">No matches played yet. Register for a tournament to get started.</p>
+          </div>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
