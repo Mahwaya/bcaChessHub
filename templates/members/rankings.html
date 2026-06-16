@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+
+{% block title %}Player Rankings — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h3 class="fw-bold mb-0">Player Rankings</h3>
+    <span class="text-muted small">ELO Rating System · Updated after every match</span>
+  </div>
+
+  <!-- Filter by association -->
+  <div class="mb-4 d-flex gap-2 flex-wrap">
+    <a href="/rankings/" class="btn btn-sm {% if not assoc_filter %}btn-chess{% else %}btn-outline-secondary{% endif %}">All Associations</a>
+    {% for assoc in associations %}
+      <a href="?association={{ assoc.pk }}" class="btn btn-sm {% if assoc_filter == assoc.pk|stringformat:'s' %}btn-chess{% else %}btn-outline-secondary{% endif %}">
+        {{ assoc.name }}
+      </a>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover mb-0">
+        <thead style="background:var(--chess-dark);color:white;">
+          <tr>
+            <th style="width:60px;">Rank</th>
+            <th>Player</th>
+            <th>Association</th>
+            <th>Rating</th>
+            <th>Role</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for member in members %}
+          <tr>
+            <td class="text-center fw-bold">
+              {% if forloop.counter == 1 %}
+                <span style="color:#f5a623;font-size:1.2rem;">♛</span>
+              {% elif forloop.counter == 2 %}
+                <span style="color:#aaa;font-size:1.1rem;">♟</span>
+              {% elif forloop.counter == 3 %}
+                <span style="color:#cd7f32;font-size:1.1rem;">♟</span>
+              {% else %}
+                {{ forloop.counter }}
+              {% endif %}
+            </td>
+            <td>
+              <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+            </td>
+            <td class="text-muted">{{ member.association.name }}</td>
+            <td>
+              <span class="fw-bold" style="color:var(--chess-accent);">{{ member.rating }}</span>
+            </td>
+            <td>
+              <span class="badge bg-light text-dark border">{{ member.get_role_display }}</span>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="text-center text-muted py-4">
+              <i class="bi bi-trophy" style="font-size:2rem;"></i>
+              <p class="mt-2 mb-0">No ranked players yet.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-muted small mt-3">
+    <i class="bi bi-info-circle"></i>
+    Rankings use the ELO rating system. New players start at 1200. Ratings update automatically after each match result is recorded.
+  </p>
+
+</div>
+{% endblock %}

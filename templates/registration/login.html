@@ -1,0 +1,37 @@
+{% extends 'base.html' %}
+
+{% block title %}Login — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5">
+      <div class="card p-4 p-md-5">
+        <div class="text-center mb-4">
+          <span style="font-size:2.5rem;">♟</span>
+          <h4 class="fw-bold mt-2">Sign in to ChessHub</h4>
+          <p class="text-muted small">Bulawayo Chess Association</p>
+        </div>
+
+        {% if form.errors %}
+          <div class="alert alert-danger py-2 small">Invalid username or password.</div>
+        {% endif %}
+
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label class="form-label fw-semibold">Username</label>
+            <input type="text" name="username" class="form-control" autofocus required>
+          </div>
+          <div class="mb-4">
+            <label class="form-label fw-semibold">Password</label>
+            <input type="password" name="password" class="form-control" required>
+          </div>
+          <input type="hidden" name="next" value="{{ next }}">
+          <button type="submit" class="btn btn-chess w-100 py-2 fw-semibold">Login</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
