@@ -56,12 +56,9 @@ def dashboard(request):
         'tournament__association'
     ).order_by('-tournament__start_date')
 
-    notifications = Notification.objects.filter(
-        recipient=request.user, is_read=False
-    ).order_by('-sent_at')[:5]
-
-    # Mark notifications as read
-    notifications.update(is_read=True)
+    unread_qs = Notification.objects.filter(recipient=request.user, is_read=False)
+    unread_qs.update(is_read=True)
+    notifications = unread_qs.order_by('-sent_at')[:5]
 
     return render(request, 'members/dashboard.html', {
         'member': member,
