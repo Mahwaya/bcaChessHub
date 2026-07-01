@@ -3,7 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
 from django.db.models import Q
-from .models import Member
+from .models import Member, RatingHistory
 from .forms import SignupForm
 from associations.models import Association
 from matches.models import Match
@@ -94,6 +94,95 @@ def dashboard(request):
         'recent_matches': all_matches,
         'registrations': registrations,
         'notifications': notifications,
+    })
+
+
+@login_required
+def manage_members(request):
+    """Association admin panel — view and manage all members."""
+    if not (request.user.is_staff or (hasattr(request.user, 'member') and request.user.member.role == 'admin')):
+        messages.error(request, 'Only administrators can access member management.')
+        return redirect('dashboard')
+
+    # Staff sees all; association admin sees only their association
+    if request.user.is_staff:
+        base_qs = Member.objects.select_related('user', 'association')
+    else:
+        base_qs = Member.objects.select_related('user', 'association').filter(
+            association=request.user.member.association
+        )
+
+    if request.method == 'POST':
+        action     = request.POST.get('action')
+        member_pk  = request.POST.get('member_pk')
+        target     = get_object_or_404(base_qs, pk=member_pk)
+
+        if action == 'set_role':
+            new_role = request.POST.get('role')
+            valid_roles = [r[0] for r in Member.ROLE_CHOICES]
+            if new_role in valid_roles:
+                target.role = new_role
+                target.save(update_fields=['role'])
+                messages.success(request, f'{target} role changed to {target.get_role_display()}.')
+
+        elif action == 'toggle_active':
+            target.is_active = not target.is_active
+            target.save(update_fields=['is_active'])
+            state = 'activated' if target.is_active else 'deactivated'
+            messages.success(request, f'{target} {state}.')
+
+        elif action == 'reset_elo':
+            if request.user.is_staff:
+                target.rating = 1200
+                target.save(update_fields=['rating'])
+                RatingHistory.objects.create(member=target, rating=1200, delta=0)
+                messages.success(request, f'{target} ELO reset to 1200.')
+            else:
+                messages.error(request, 'Only site staff can reset ELO ratings.')
+
+        return redirect('manage_members')
+
+    # GET — filters
+    role_filter   = request.GET.get('role', '')
+    status_filter = request.GET.get('status', 'active')
+    search        = request.GET.get('q', '').strip()
+
+    qs = base_qs
+    if role_filter:
+        qs = qs.filter(role=role_filter)
+    if status_filter == 'active':
+        qs = qs.filter(is_active=True)
+    elif status_filter == 'inactive':
+        qs = qs.filter(is_active=False)
+    if search:
+        qs = qs.filter(
+            user__first_name__icontains=search
+        ) | qs.filter(
+            user__last_name__icontains=search
+        ) | qs.filter(
+            user__username__icontains=search
+        )
+
+    qs = qs.order_by('-rating')
+
+    # Summary counts (unfiltered)
+    all_members = base_qs
+    summary = {
+        'total':    all_members.count(),
+        'active':   all_members.filter(is_active=True).count(),
+        'players':  all_members.filter(role='player').count(),
+        'admins':   all_members.filter(role='admin').count(),
+        'coaches':  all_members.filter(role='coach').count(),
+    }
+
+    return render(request, 'members/manage.html', {
+        'members': qs,
+        'summary': summary,
+        'role_choices': Member.ROLE_CHOICES,
+        'role_filter': role_filter,
+        'status_filter': status_filter,
+        'search': search,
+        'can_reset_elo': request.user.is_staff,
     })
 
 

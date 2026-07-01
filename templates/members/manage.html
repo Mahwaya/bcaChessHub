@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+{% block title %}Member Management — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+  <!-- Header -->
+  <div class="d-flex align-items-start justify-content-between flex-wrap gap-2 mb-4">
+    <div>
+      <h3 class="fw-bold mb-0">Member Management</h3>
+      <div class="text-muted small">
+        {% if user.is_staff %}All associations{% else %}{{ user.member.association.name }}{% endif %}
+      </div>
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+  </div>
+
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <!-- Summary cards -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4">{{ summary.total }}</div>
+        <div class="text-muted small">Total</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-success">{{ summary.active }}</div>
+        <div class="text-muted small">Active</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4" style="color:var(--chess-accent);">{{ summary.players }}</div>
+        <div class="text-muted small">Players</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-warning">{{ summary.coaches }}</div>
+        <div class="text-muted small">Coaches</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-3 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-info">{{ summary.admins }}</div>
+        <div class="text-muted small">Admins</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="card p-3 mb-4">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-5">
+        <input type="text" name="q" value="{{ search }}" class="form-control form-control-sm"
+               placeholder="Search by name or username…">
+      </div>
+      <div class="col-sm-3">
+        <select name="role" class="form-select form-select-sm">
+          <option value="">All roles</option>
+          {% for val, label in role_choices %}
+          <option value="{{ val }}" {% if role_filter == val %}selected{% endif %}>{{ label }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2">
+        <select name="status" class="form-select form-select-sm">
+          <option value="active"   {% if status_filter == 'active' %}selected{% endif %}>Active</option>
+          <option value="inactive" {% if status_filter == 'inactive' %}selected{% endif %}>Inactive</option>
+          <option value=""         {% if status_filter == '' %}selected{% endif %}>All</option>
+        </select>
+      </div>
+      <div class="col-sm-2 d-flex gap-1">
+        <button type="submit" class="btn btn-chess btn-sm">Filter</button>
+        <a href="{% url 'manage_members' %}" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Members table -->
+  {% if members %}
+  <div class="card">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead style="background:var(--chess-dark);color:white;">
+          <tr>
+            <th>Member</th>
+            <th class="d-none d-md-table-cell">Association</th>
+            <th class="text-center">ELO</th>
+            <th style="width:160px;">Role</th>
+            <th class="text-center">Status</th>
+            <th class="text-center">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for m in members %}
+          <tr class="{% if not m.is_active %}table-secondary opacity-50{% endif %}">
+
+            <!-- Name + username -->
+            <td>
+              <a href="{% url 'player_profile' m.pk %}" class="fw-semibold text-decoration-none">
+                {{ m.user.get_full_name|default:m.user.username }}
+              </a>
+              <div class="text-muted small">@{{ m.user.username }}</div>
+            </td>
+
+            <!-- Association (staff view) -->
+            <td class="d-none d-md-table-cell text-muted small">{{ m.association.name }}</td>
+
+            <!-- ELO -->
+            <td class="text-center fw-bold" style="color:var(--chess-accent);">{{ m.rating }}</td>
+
+            <!-- Role selector -->
+            <td>
+              <form method="post" class="d-flex gap-1">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="set_role">
+                <input type="hidden" name="member_pk" value="{{ m.pk }}">
+                <select name="role" class="form-select form-select-sm"
+                        onchange="this.form.submit()" style="min-width:120px;">
+                  {% for val, label in role_choices %}
+                  <option value="{{ val }}" {% if m.role == val %}selected{% endif %}>{{ label }}</option>
+                  {% endfor %}
+                </select>
+              </form>
+            </td>
+
+            <!-- Active status badge -->
+            <td class="text-center">
+              {% if m.is_active %}
+                <span class="badge bg-success">Active</span>
+              {% else %}
+                <span class="badge bg-secondary">Inactive</span>
+              {% endif %}
+            </td>
+
+            <!-- Action buttons -->
+            <td class="text-center">
+              <div class="d-flex gap-1 justify-content-center flex-wrap">
+
+                <!-- Toggle active -->
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="toggle_active">
+                  <input type="hidden" name="member_pk" value="{{ m.pk }}">
+                  <button type="submit"
+                    class="btn btn-sm {% if m.is_active %}btn-outline-danger{% else %}btn-outline-success{% endif %}"
+                    title="{% if m.is_active %}Deactivate{% else %}Activate{% endif %}"
+                    onclick="return confirm('{% if m.is_active %}Deactivate{% else %}Activate{% endif %} {{ m.user.get_full_name }}?')">
+                    {% if m.is_active %}⊘{% else %}✓{% endif %}
+                  </button>
+                </form>
+
+                <!-- Reset ELO (staff only) -->
+                {% if can_reset_elo %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="reset_elo">
+                  <input type="hidden" name="member_pk" value="{{ m.pk }}">
+                  <button type="submit" class="btn btn-sm btn-outline-warning" title="Reset ELO to 1200"
+                    onclick="return confirm('Reset {{ m.user.get_full_name }}\'s ELO to 1200? This cannot be undone.')">
+                    ⟳
+                  </button>
+                </form>
+                {% endif %}
+
+              </div>
+            </td>
+
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <p class="text-muted small mt-2">{{ members|length }} member{{ members|length|pluralize }} shown.</p>
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div style="font-size:3rem;">👥</div>
+    <p class="mt-2">No members match your filters.</p>
+    <a href="{% url 'manage_members' %}" class="btn btn-outline-secondary btn-sm">Clear filters</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
