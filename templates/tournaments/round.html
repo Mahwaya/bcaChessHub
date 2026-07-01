@@ -145,11 +145,12 @@
               {% endif %}
             </td>
 
-            <!-- Lichess link -->
+            <!-- Game viewer link -->
             <td class="text-center">
-              {% if match.lichess_game_id %}
-                <a href="https://lichess.org/{{ match.lichess_game_id }}" target="_blank" rel="noopener"
-                   title="View on Lichess" style="font-size:1.1rem;text-decoration:none;">♞</a>
+              {% if match.pgn or match.lichess_game_id %}
+                <a href="{% url 'match_detail' match.pk %}"
+                   class="btn btn-sm btn-outline-secondary px-2 py-0"
+                   title="View game">♟</a>
               {% endif %}
             </td>
 

@@ -3,12 +3,27 @@ import re
 from urllib import request as urllib_request
 from urllib.error import URLError, HTTPError
 
-from django.shortcuts import get_object_or_404, redirect
+from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 
 from .models import Match
+
+
+def match_detail(request, match_pk):
+    match = get_object_or_404(
+        Match.objects.select_related(
+            'tournament__association', 'round',
+            'white_player__user', 'black_player__user',
+        ),
+        pk=match_pk,
+    )
+    pgn_json = json.dumps(match.pgn) if match.pgn else 'null'
+    return render(request, 'matches/detail.html', {
+        'match': match,
+        'pgn_json': pgn_json,
+    })
 
 
 def _parse_game_id(raw):

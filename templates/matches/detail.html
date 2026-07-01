@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+{% block title %}
+  {{ match.white_player.user.get_full_name|default:match.white_player.user.username }} vs
+  {% if match.black_player %}{{ match.black_player.user.get_full_name|default:match.black_player.user.username }}{% else %}Bye{% endif %}
+   — ChessHub
+{% endblock %}
+
+{% block extra_head %}
+{% if match.pgn %}
+<link rel="stylesheet"
+      href="https://unpkg.com/chessboardjs@1.0.0/www/css/chessboard-1.0.0.min.css">
+<style>
+  #board .square-55d63 { border-radius: 2px; }
+  .move-btn { cursor: pointer; padding: 1px 6px; border-radius: 3px; transition: background 0.1s; }
+  .move-btn:hover { background: rgba(233,69,96,0.15); }
+  .move-btn.active { background: var(--chess-accent) !important; color: #fff !important; }
+</style>
+{% endif %}
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+  <!-- Breadcrumb -->
+  <div class="text-muted small mb-3">
+    <a href="{% url 'tournament_detail' match.tournament.pk %}" class="text-muted">
+      {{ match.tournament.name }}
+    </a>
+    &rsaquo;
+    <a href="{% url 'tournament_round' match.tournament.pk match.round.number %}" class="text-muted">
+      Round {{ match.round.number }}
+    </a>
+    &rsaquo; Game
+  </div>
+
+  <!-- Match header card -->
+  <div class="card p-4 mb-4">
+    <div class="row align-items-center text-center g-3">
+
+      <!-- White player -->
+      <div class="col">
+        <a href="{% url 'player_profile' match.white_player.pk %}"
+           class="fw-bold fs-5 text-decoration-none">
+          {{ match.white_player.user.get_full_name|default:match.white_player.user.username }}
+        </a>
+        <div class="text-muted small mt-1">♔ White &nbsp;·&nbsp; {{ match.white_player.rating }} ELO</div>
+      </div>
+
+      <!-- Score -->
+      <div class="col-auto">
+        <div class="fw-bold" style="font-size:1.8rem;letter-spacing:4px;">
+          {% if match.result == 'white_win' or match.result == 'black_forfeit' %}
+            <span style="color:var(--chess-accent);">1</span> – 0
+          {% elif match.result == 'black_win' or match.result == 'white_forfeit' %}
+            0 – <span style="color:var(--chess-accent);">1</span>
+          {% elif match.result == 'draw' %}
+            ½ – ½
+          {% else %}
+            <span class="text-muted fs-4">vs</span>
+          {% endif %}
+        </div>
+        <div class="text-muted mt-1" style="font-size:0.75rem;">
+          {{ match.tournament.name }} &middot; R{{ match.round.number }}
+          {% if match.board_number %} &middot; Board {{ match.board_number }}{% endif %}
+        </div>
+        {% if match.lichess_game_id %}
+        <a href="https://lichess.org/{{ match.lichess_game_id }}" target="_blank" rel="noopener"
+           class="btn btn-outline-secondary btn-sm mt-2" style="font-size:0.78rem;">
+          ♞ View on Lichess
+        </a>
+        {% endif %}
+      </div>
+
+      <!-- Black player -->
+      <div class="col">
+        {% if match.black_player %}
+          <a href="{% url 'player_profile' match.black_player.pk %}"
+             class="fw-bold fs-5 text-decoration-none">
+            {{ match.black_player.user.get_full_name|default:match.black_player.user.username }}
+          </a>
+          <div class="text-muted small mt-1">♚ Black &nbsp;·&nbsp; {{ match.black_player.rating }} ELO</div>
+        {% else %}
+          <span class="text-muted fs-5">Bye</span>
+        {% endif %}
+      </div>
+
+    </div>
+  </div>
+
+  {% if match.pgn %}
+  <!-- ── PGN Board Viewer ─────────────────────────────────────────────── -->
+  <div class="row g-4">
+
+    <!-- Board + controls -->
+    <div class="col-lg-7">
+      <div class="card p-3">
+        <div id="board" style="width:100%;"></div>
+
+        <!-- Navigation controls -->
+        <div class="d-flex gap-2 justify-content-center align-items-center mt-3">
+          <button id="btn-start" class="btn btn-outline-secondary btn-sm px-3" title="First move">⏮</button>
+          <button id="btn-prev"  class="btn btn-outline-secondary btn-sm px-3" title="Previous (←)">◀</button>
+          <span id="move-counter"
+                class="text-muted small px-2"
+                style="min-width:110px;text-align:center;">Start</span>
+          <button id="btn-next" class="btn btn-outline-secondary btn-sm px-3" title="Next (→)">▶</button>
+          <button id="btn-end"  class="btn btn-outline-secondary btn-sm px-3" title="Last move">⏭</button>
+        </div>
+        <div class="text-muted text-center mt-1" style="font-size:0.72rem;">
+          Use ← → arrow keys to step through moves
+        </div>
+      </div>
+    </div>
+
+    <!-- Move list -->
+    <div class="col-lg-5">
+      <div class="card p-3" style="height:100%;">
+        <h6 class="fw-bold mb-2">Move List</h6>
+        <div id="move-list"
+             style="max-height:440px;overflow-y:auto;
+                    font-family:'Courier New',monospace;font-size:0.88rem;">
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  {% elif match.lichess_game_id %}
+  <!-- ── Lichess embed (no stored PGN) ────────────────────────────────── -->
+  <div class="d-flex justify-content-center">
+    <div class="card p-0 overflow-hidden" style="width:min(500px,100%);">
+      <iframe
+        src="https://lichess.org/embed/game/{{ match.lichess_game_id }}?theme=brown&bg=dark"
+        style="width:100%;height:555px;border:none;"
+        allowtransparency="true">
+      </iframe>
+    </div>
+  </div>
+
+  {% else %}
+  <!-- ── No game data ──────────────────────────────────────────────────── -->
+  <div class="text-center py-5 text-muted">
+    <div style="font-size:3rem;">♟</div>
+    <p class="mt-2">No game record is available for this match.</p>
+    <a href="{% url 'tournament_round' match.tournament.pk match.round.number %}"
+       class="btn btn-outline-secondary btn-sm mt-1">← Back to Round</a>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+{% if match.pgn %}
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chess.js/0.10.3/chess.min.js"></script>
+<script src="https://unpkg.com/chessboardjs@1.0.0/www/js/chessboard-1.0.0.min.js"></script>
+<script>
+(function () {
+  const PGN = {{ pgn_json|safe }};
+  if (!PGN) return;
+
+  // ── Parse PGN and build position list ─────────────────────────────
+  const game = new Chess();
+  if (!game.load_pgn(PGN)) {
+    document.getElementById('board').innerHTML =
+      '<p class="text-danger p-3">Could not parse PGN.</p>';
+    return;
+  }
+
+  const sanMoves = game.history();   // ['e4', 'e5', 'Nf3', ...]
+
+  const positions = [];              // FEN string after each half-move; index 0 = start
+  const walker = new Chess();
+  positions.push(walker.fen());
+  for (const mv of sanMoves) {
+    walker.move(mv);
+    positions.push(walker.fen());
+  }
+
+  let current = 0;
+
+  // ── Board ──────────────────────────────────────────────────────────
+  const board = Chessboard('board', {
+    position: positions[0],
+    pieceTheme: 'https://unpkg.com/chessboardjs@1.0.0/www/img/chesspieces/wikipedia/{piece}.png',
+  });
+
+  // ── Build move list ────────────────────────────────────────────────
+  (function buildMoveList() {
+    const container = document.getElementById('move-list');
+    container.innerHTML = '';
+
+    for (let i = 0; i < sanMoves.length; i += 2) {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;gap:4px;padding:3px 0;align-items:center;';
+
+      const numEl = document.createElement('span');
+      numEl.textContent = (Math.floor(i / 2) + 1) + '.';
+      numEl.style.cssText = 'width:2.4rem;color:#888;flex-shrink:0;';
+      row.appendChild(numEl);
+
+      [0, 1].forEach(offset => {
+        if (sanMoves[i + offset] === undefined) return;
+        const btn = document.createElement('span');
+        btn.className = 'move-btn';
+        btn.textContent = sanMoves[i + offset];
+        btn.dataset.idx = i + offset + 1;
+        row.appendChild(btn);
+      });
+
+      container.appendChild(row);
+    }
+
+    container.addEventListener('click', e => {
+      const btn = e.target.closest('.move-btn');
+      if (btn) goTo(parseInt(btn.dataset.idx));
+    });
+  })();
+
+  // ── Navigation ─────────────────────────────────────────────────────
+  function highlightMove(idx) {
+    document.querySelectorAll('.move-btn').forEach(btn => {
+      btn.classList.toggle('active', parseInt(btn.dataset.idx) === idx);
+    });
+    const active = document.querySelector('.move-btn.active');
+    if (active) active.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+
+  function updateCounter() {
+    const el = document.getElementById('move-counter');
+    if (current === 0) {
+      el.textContent = 'Start';
+    } else {
+      const moveNum = Math.ceil(current / 2);
+      const side    = current % 2 === 1 ? 'White' : 'Black';
+      el.textContent = 'Move ' + moveNum + ' (' + side + ')';
+    }
+  }
+
+  function goTo(idx) {
+    current = Math.max(0, Math.min(idx, positions.length - 1));
+    board.position(positions[current], false);
+    highlightMove(current);
+    updateCounter();
+  }
+
+  document.getElementById('btn-start').addEventListener('click', () => goTo(0));
+  document.getElementById('btn-prev').addEventListener('click',  () => goTo(current - 1));
+  document.getElementById('btn-next').addEventListener('click',  () => goTo(current + 1));
+  document.getElementById('btn-end').addEventListener('click',   () => goTo(positions.length - 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft')  goTo(current - 1);
+    if (e.key === 'ArrowRight') goTo(current + 1);
+  });
+
+})();
+</script>
+{% endif %}
+{% endblock %}
