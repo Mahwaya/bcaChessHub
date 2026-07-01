@@ -1,0 +1,83 @@
+{% extends 'base.html' %}
+{% block title %}Waiting for Payment Approval{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5 text-center">
+
+      <div class="card p-4 p-md-5">
+
+        <!-- Spinner -->
+        <div class="mb-4">
+          <div class="spinner-border text-danger" role="status" style="width:3rem;height:3rem;">
+            <span class="visually-hidden">Waiting…</span>
+          </div>
+        </div>
+
+        <h4 class="fw-bold mb-1">Check Your Phone</h4>
+        <p class="text-muted mb-4">
+          A payment request of
+          <strong>{{ payment.currency }} {{ payment.amount }}</strong>
+          has been sent to <strong>{{ payment.phone_number }}</strong>.
+          Approve it on your phone to complete registration.
+        </p>
+
+        <!-- Steps -->
+        <ol class="text-start small text-muted mb-4" style="padding-left:1.4rem;">
+          <li>Open your EcoCash / InnBucks app or await the USSD prompt.</li>
+          <li>Confirm the payment for <strong>{{ tournament.name }}</strong>.</li>
+          <li>This page will update automatically once approved.</li>
+        </ol>
+
+        <!-- Status indicator -->
+        <div id="statusBox" class="alert alert-secondary py-2 small mb-4">
+          Status: <span id="statusText">waiting for approval…</span>
+        </div>
+
+        {% if sandbox %}
+        <div class="alert alert-warning py-2 small mb-3">
+          <strong>Sandbox:</strong> payment auto-approves in a few seconds, or
+          <a href="{% url 'sandbox_checkout' payment.pk %}" class="alert-link">click here to approve manually</a>.
+        </div>
+        {% endif %}
+
+        <a href="{% url 'tournament_detail' tournament.pk %}" class="btn btn-outline-secondary btn-sm">
+          Cancel &amp; return to tournament
+        </a>
+
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const POLL_URL = "{% url 'poll_payment' payment.pk %}";
+const statusText = document.getElementById('statusText');
+const statusBox = document.getElementById('statusBox');
+
+function poll() {
+  fetch(POLL_URL, {headers: {'X-Requested-With': 'XMLHttpRequest'}})
+    .then(r => r.json())
+    .then(data => {
+      if (data.status === 'completed') {
+        statusBox.className = 'alert alert-success py-2 small mb-4';
+        statusText.textContent = 'Payment approved!';
+        setTimeout(() => { window.location = data.redirect; }, 800);
+        return;
+      }
+      if (data.status === 'cancelled' || data.status === 'failed') {
+        statusBox.className = 'alert alert-danger py-2 small mb-4';
+        statusText.textContent = 'Payment ' + data.status + '. Please try again.';
+        return;
+      }
+      setTimeout(poll, 5000);
+    })
+    .catch(() => setTimeout(poll, 8000));
+}
+
+setTimeout(poll, 3000);
+</script>
+{% endblock %}

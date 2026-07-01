@@ -1,0 +1,136 @@
+{% extends 'base.html' %}
+{% block title %}Pay Registration Fee — {{ tournament.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+
+      {% if sandbox %}
+      <div class="alert alert-warning py-2 mb-4 small">
+        <strong>Sandbox mode</strong> — No real money will be charged. Use any phone number.
+      </div>
+      {% endif %}
+
+      <div class="card p-4 p-md-5">
+        <h4 class="fw-bold mb-1">Pay Registration Fee</h4>
+        <p class="text-muted small mb-4">{{ tournament.name }}</p>
+
+        <!-- Amount -->
+        <div class="text-center py-3 mb-4 rounded" style="background:#f8f9fa;">
+          <div style="font-size:2.2rem;font-weight:800;color:var(--chess-accent);">
+            {{ tournament.currency }} {{ tournament.registration_fee }}
+          </div>
+          <div class="text-muted small mt-1">Registration fee</div>
+        </div>
+
+        <form method="post" id="payForm">
+          {% csrf_token %}
+
+          <!-- Gateway selection -->
+          <p class="fw-semibold mb-2 small text-uppercase" style="letter-spacing:0.05em;color:#888;">Payment Method</p>
+          <div class="d-flex flex-column gap-2 mb-4" id="gatewayOptions">
+
+            <label class="gateway-option selected" for="gw_ecocash">
+              <input type="radio" name="gateway" value="ecocash" id="gw_ecocash" checked hidden>
+              <div class="d-flex align-items-center gap-3">
+                <span style="font-size:1.4rem;">📱</span>
+                <div>
+                  <div class="fw-semibold">EcoCash</div>
+                  <div class="text-muted small">Econet mobile money</div>
+                </div>
+                <span class="ms-auto checkmark">✓</span>
+              </div>
+            </label>
+
+            <label class="gateway-option" for="gw_innbucks">
+              <input type="radio" name="gateway" value="innbucks" id="gw_innbucks" hidden>
+              <div class="d-flex align-items-center gap-3">
+                <span style="font-size:1.4rem;">💳</span>
+                <div>
+                  <div class="fw-semibold">InnBucks</div>
+                  <div class="text-muted small">NetOne mobile money</div>
+                </div>
+                <span class="ms-auto checkmark" style="visibility:hidden;">✓</span>
+              </div>
+            </label>
+
+            <label class="gateway-option" for="gw_web">
+              <input type="radio" name="gateway" value="web" id="gw_web" hidden>
+              <div class="d-flex align-items-center gap-3">
+                <span style="font-size:1.4rem;">🌐</span>
+                <div>
+                  <div class="fw-semibold">Card / PayPal</div>
+                  <div class="text-muted small">VISA, Mastercard, PayPal via Paynow</div>
+                </div>
+                <span class="ms-auto checkmark" style="visibility:hidden;">✓</span>
+              </div>
+            </label>
+
+          </div>
+
+          <!-- Phone number (shown for mobile methods) -->
+          <div id="phoneField" class="mb-4">
+            <label class="form-label fw-semibold">Mobile Number</label>
+            <div class="input-group">
+              <span class="input-group-text">+263</span>
+              <input type="tel" name="phone_number" id="phoneInput"
+                     class="form-control" placeholder="77 123 4567"
+                     pattern="[0-9\s]{9,12}" autocomplete="tel">
+            </div>
+            <div class="form-text">Enter your EcoCash / InnBucks registered number.</div>
+          </div>
+
+          <button type="submit" class="btn btn-chess w-100 py-2 fw-semibold" id="payBtn">
+            Pay {{ tournament.currency }} {{ tournament.registration_fee }} with EcoCash
+          </button>
+        </form>
+
+        <p class="text-center text-muted small mt-3 mb-0">
+          Secured by <strong>Paynow Zimbabwe</strong>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<style>
+.gateway-option {
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.gateway-option.selected {
+  border-color: var(--chess-accent);
+  background: #fff5f7;
+}
+.gateway-option .checkmark { color: var(--chess-accent); font-weight: bold; }
+</style>
+
+{% block extra_js %}
+<script>
+const options = document.querySelectorAll('.gateway-option');
+const phoneField = document.getElementById('phoneField');
+const payBtn = document.getElementById('payBtn');
+const labels = {ecocash: 'EcoCash', innbucks: 'InnBucks', web: 'Card / PayPal'};
+
+options.forEach(opt => {
+  opt.addEventListener('click', () => {
+    options.forEach(o => {
+      o.classList.remove('selected');
+      o.querySelector('.checkmark').style.visibility = 'hidden';
+    });
+    opt.classList.add('selected');
+    opt.querySelector('.checkmark').style.visibility = 'visible';
+    const val = opt.querySelector('input').value;
+    phoneField.style.display = val === 'web' ? 'none' : 'block';
+    document.getElementById('phoneInput').required = val !== 'web';
+    payBtn.textContent = `Pay {{ tournament.currency }} {{ tournament.registration_fee }} with ${labels[val]}`;
+  });
+});
+</script>
+{% endblock %}
+{% endblock %}

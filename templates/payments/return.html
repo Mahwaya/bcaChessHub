@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+{% block title %}Payment {{ payment.status|title }} — {{ tournament.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+  <div class="row justify-content-center">
+    <div class="col-md-5 text-center">
+      <div class="card p-4 p-md-5">
+
+        {% if payment.status == 'completed' %}
+          <div style="font-size:3.5rem;line-height:1;" class="mb-3">✅</div>
+          <h4 class="fw-bold mb-2 text-success">Payment Confirmed</h4>
+          <p class="text-muted mb-4">
+            Your payment of <strong>{{ payment.currency }} {{ payment.amount }}</strong>
+            was received. You are now registered for
+            <strong>{{ tournament.name }}</strong>.
+          </p>
+          <a href="{% url 'tournament_detail' tournament.pk %}" class="btn btn-chess w-100 mb-2">
+            View Tournament
+          </a>
+          <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm w-100">
+            My Dashboard
+          </a>
+
+        {% elif payment.status in 'cancelled,failed' %}
+          <div style="font-size:3.5rem;line-height:1;" class="mb-3">❌</div>
+          <h4 class="fw-bold mb-2 text-danger">Payment {{ payment.status|title }}</h4>
+          <p class="text-muted mb-4">
+            Your payment was not completed. No money has been charged.
+            You can try again from the tournament page.
+          </p>
+          <a href="{% url 'payment_initiate' tournament.pk %}" class="btn btn-chess w-100 mb-2">
+            Try Again
+          </a>
+          <a href="{% url 'tournament_detail' tournament.pk %}" class="btn btn-outline-secondary btn-sm w-100">
+            Return to Tournament
+          </a>
+
+        {% else %}
+          <div style="font-size:3.5rem;line-height:1;" class="mb-3">⏳</div>
+          <h4 class="fw-bold mb-2">Payment Pending</h4>
+          <p class="text-muted mb-4">
+            Your payment is still being processed. Once confirmed, your
+            registration will be activated automatically.
+          </p>
+          <a href="{% url 'tournament_detail' tournament.pk %}" class="btn btn-chess w-100">
+            Return to Tournament
+          </a>
+        {% endif %}
+
+        <hr class="my-3">
+        <p class="text-muted small mb-0">
+          Reference: <code>{{ payment.paynow_reference|default:"—" }}</code>
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
