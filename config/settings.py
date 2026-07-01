@@ -5,9 +5,16 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Core ──────────────────────────────────────────────────────────────────────
+import os
+
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-g4o@whz0=p=nl7+@*emd*lszg+$#$_8@%vr%6qem-jd2h32@uy')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver', cast=Csv())
+
+# Railway auto-injects RAILWAY_PUBLIC_DOMAIN — add it automatically
+_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
+if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(_railway_domain)
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
