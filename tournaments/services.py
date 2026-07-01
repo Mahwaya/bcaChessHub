@@ -107,3 +107,75 @@ def complete_round(round_obj):
         send_tournament_complete(tournament)
 
     return round_obj
+
+
+def compute_standings(tournament):
+    """
+    Return a list of standing dicts for all confirmed players in `tournament`,
+    sorted by score (desc), Buchholz tiebreaker (desc), then ELO (desc).
+
+    Each entry: player, score, wins, draws, losses, byes, games_played, buchholz, rank
+    """
+    from matches.models import Match
+
+    confirmed = tournament.registrations.filter(status='confirmed').select_related('player__user')
+    players = [reg.player for reg in confirmed]
+    if not players:
+        return []
+
+    player_pks = {p.pk for p in players}
+
+    score = {p.pk: 0.0 for p in players}
+    wins = {p.pk: 0 for p in players}
+    draws = {p.pk: 0 for p in players}
+    losses = {p.pk: 0 for p in players}
+    byes = {p.pk: 0 for p in players}
+    games = {p.pk: 0 for p in players}
+    opponents = {p.pk: [] for p in players}
+
+    real_matches = (
+        Match.objects
+        .filter(tournament=tournament, black_player__isnull=False)
+        .exclude(result='pending')
+    )
+    for m in real_matches:
+        w, b = m.white_player_id, m.black_player_id
+        if w in player_pks and b in player_pks:
+            opponents[w].append(b)
+            opponents[b].append(w)
+
+        if m.result in ('white_win', 'black_forfeit'):
+            if w in score: score[w] += 1; wins[w] += 1; games[w] += 1
+            if b in score: losses[b] += 1; games[b] += 1
+        elif m.result in ('black_win', 'white_forfeit'):
+            if b in score: score[b] += 1; wins[b] += 1; games[b] += 1
+            if w in score: losses[w] += 1; games[w] += 1
+        elif m.result == 'draw':
+            if w in score: score[w] += 0.5; draws[w] += 1; games[w] += 1
+            if b in score: score[b] += 0.5; draws[b] += 1; games[b] += 1
+
+    for m in Match.objects.filter(tournament=tournament, black_player__isnull=True, result='white_win'):
+        w = m.white_player_id
+        if w in score:
+            score[w] += 1
+            byes[w] += 1
+
+    buchholz = {p.pk: sum(score.get(opp, 0) for opp in opponents[p.pk]) for p in players}
+
+    rows = [
+        {
+            'player': p,
+            'score': score[p.pk],
+            'wins': wins[p.pk],
+            'draws': draws[p.pk],
+            'losses': losses[p.pk],
+            'byes': byes[p.pk],
+            'games_played': games[p.pk],
+            'buchholz': buchholz[p.pk],
+        }
+        for p in players
+    ]
+    rows.sort(key=lambda x: (-x['score'], -x['buchholz'], -x['player'].rating))
+    for i, row in enumerate(rows):
+        row['rank'] = i + 1
+    return rows

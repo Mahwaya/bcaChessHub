@@ -1,7 +1,8 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Tournament, TournamentRegistration
+from .models import Tournament, TournamentRegistration, Round
+from matches.models import Match
 
 
 def tournament_list(request):
@@ -66,3 +67,36 @@ def tournament_register(request, pk):
     # Email sent when admin confirms (status → confirmed), not on initial pending
 
     return redirect('tournament_detail', pk=pk)
+
+
+def tournament_standings(request, pk):
+    """Public standings table for a tournament."""
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    from .services import compute_standings
+    standings = compute_standings(tournament)
+    rounds = tournament.rounds.order_by('number')
+    return render(request, 'tournaments/standings.html', {
+        'tournament': tournament,
+        'standings': standings,
+        'rounds': rounds,
+    })
+
+
+def tournament_round(request, pk, round_number):
+    """Public pairings view for a single round."""
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    round_obj = get_object_or_404(Round, tournament=tournament, number=round_number)
+    matches = (
+        Match.objects
+        .filter(round=round_obj)
+        .select_related('white_player__user', 'black_player__user')
+        .order_by('board_number')
+    )
+    rounds = tournament.rounds.order_by('number')
+    return render(request, 'tournaments/round.html', {
+        'tournament': tournament,
+        'round': round_obj,
+        'matches': matches,
+        'rounds': rounds,
+        'viewer_member': request.user.member if request.user.is_authenticated and hasattr(request.user, 'member') else None,
+    })
