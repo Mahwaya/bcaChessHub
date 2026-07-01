@@ -47,7 +47,9 @@
               {% endif %}
             </td>
             <td>
-              <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+              <a href="{% url 'player_profile' member.pk %}" class="text-decoration-none">
+                <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+              </a>
             </td>
             <td class="text-muted">{{ member.association.name }}</td>
             <td>

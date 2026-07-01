@@ -34,6 +34,31 @@ class Member(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name()} ({self.association.name})"
 
-    def update_rating(self, new_rating):
+    def update_rating(self, new_rating, match=None):
+        delta = new_rating - self.rating
         self.rating = new_rating
         self.save(update_fields=['rating'])
+        RatingHistory.objects.create(
+            member=self,
+            rating=new_rating,
+            delta=delta,
+            match=match,
+        )
+
+
+class RatingHistory(models.Model):
+    member = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='rating_history')
+    rating = models.IntegerField()
+    delta = models.IntegerField(default=0)
+    match = models.ForeignKey(
+        'matches.Match', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='rating_changes',
+    )
+    recorded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['recorded_at']
+
+    def __str__(self):
+        sign = '+' if self.delta >= 0 else ''
+        return f"{self.member} → {self.rating} ({sign}{self.delta})"

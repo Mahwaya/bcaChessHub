@@ -51,5 +51,5 @@ class Match(models.Model):
         else:
             score_white, score_black = 0.5, 0.5
 
-        white.update_rating(round(white.rating + K * (score_white - expected_white)))
-        black.update_rating(round(black.rating + K * (score_black - expected_black)))
+        white.update_rating(round(white.rating + K * (score_white - expected_white)), match=self)
+        black.update_rating(round(black.rating + K * (score_black - expected_black)), match=self)
