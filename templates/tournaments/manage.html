@@ -11,9 +11,14 @@
       <h3 class="fw-bold mt-1 mb-0">{{ tournament.name }}</h3>
       <div class="text-muted small">{{ tournament.association.name }} &middot; Director Panel</div>
     </div>
-    <span class="badge fs-6 rounded-pill badge-status-{{ tournament.status }}">
-      {{ tournament.get_status_display }}
-    </span>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge fs-6 rounded-pill badge-status-{{ tournament.status }}">
+        {{ tournament.get_status_display }}
+      </span>
+      <a href="{% url 'tournament_edit' tournament.pk %}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-pencil"></i> Edit
+      </a>
+    </div>
   </div>
 
   <!-- Flash messages -->

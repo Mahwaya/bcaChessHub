@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 from .models import Tournament, TournamentRegistration, Round
+from .forms import TournamentForm
 from matches.models import Match
 
 
@@ -224,3 +225,72 @@ def tournament_record_result(request, pk, match_pk):
     match.record_result(result)
     messages.success(request, f'Board {match.board_number}: {match.get_result_display()} saved.')
     return redirect('tournament_manage', pk=pk)
+
+
+def _can_create(user):
+    """True if user may create tournaments."""
+    if user.is_staff:
+        return True
+    return hasattr(user, 'member') and user.member.role == 'admin'
+
+
+@login_required
+def create_tournament(request):
+    if not _can_create(request.user):
+        messages.error(request, 'Only administrators can create tournaments.')
+        return redirect('tournament_list')
+
+    if request.method == 'POST':
+        form = TournamentForm(request.POST)
+        if form.is_valid():
+            tournament = form.save(commit=False)
+            # Staff can set any association; admins default to their own
+            if request.user.is_staff:
+                from associations.models import Association
+                assoc_pk = request.POST.get('association')
+                tournament.association = get_object_or_404(Association, pk=assoc_pk)
+            else:
+                tournament.association = request.user.member.association
+            tournament.created_by = request.user.member if hasattr(request.user, 'member') else None
+            tournament.save()
+            messages.success(request, f'"{tournament.name}" created successfully.')
+            return redirect('tournament_manage', pk=tournament.pk)
+    else:
+        form = TournamentForm()
+
+    associations = []
+    if request.user.is_staff:
+        from associations.models import Association
+        associations = Association.objects.filter(is_active=True)
+
+    return render(request, 'tournaments/form.html', {
+        'form': form,
+        'associations': associations,
+        'action': 'Create',
+        'title': 'Create Tournament',
+    })
+
+
+@login_required
+def edit_tournament(request, pk):
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+
+    if not _is_director(request.user, tournament):
+        messages.error(request, 'You do not have permission to edit this tournament.')
+        return redirect('tournament_detail', pk=pk)
+
+    if request.method == 'POST':
+        form = TournamentForm(request.POST, instance=tournament)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Tournament updated.')
+            return redirect('tournament_manage', pk=pk)
+    else:
+        form = TournamentForm(instance=tournament)
+
+    return render(request, 'tournaments/form.html', {
+        'form': form,
+        'tournament': tournament,
+        'action': 'Save Changes',
+        'title': f'Edit — {tournament.name}',
+    })

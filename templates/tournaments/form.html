@@ -1,0 +1,169 @@
+{% extends 'base.html' %}
+{% block title %}{{ title }} — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4" style="max-width:680px;">
+
+  <div class="mb-4">
+    <a href="{% url 'tournament_list' %}" class="text-muted small">&larr; All Tournaments</a>
+    <h3 class="fw-bold mt-1 mb-0">{{ title }}</h3>
+  </div>
+
+  {% if form.non_field_errors %}
+  <div class="alert alert-danger py-2">{{ form.non_field_errors }}</div>
+  {% endif %}
+
+  <form method="post" novalidate>
+    {% csrf_token %}
+
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3 text-uppercase" style="font-size:.75rem;letter-spacing:.06em;color:#888;">Basic Details</h6>
+
+      <!-- Name -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Tournament Name <span class="text-danger">*</span></label>
+        <input type="text" name="name" value="{{ form.name.value|default:'' }}"
+               class="form-control {% if form.name.errors %}is-invalid{% endif %}"
+               placeholder="e.g. BCA Open 2026" required>
+        {% for e in form.name.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+      </div>
+
+      <!-- Association (staff only) -->
+      {% if associations %}
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Association <span class="text-danger">*</span></label>
+        <select name="association" class="form-select" required>
+          <option value="">— Select association —</option>
+          {% for a in associations %}
+          <option value="{{ a.pk }}"
+            {% if tournament and tournament.association_id == a.pk %}selected{% endif %}>
+            {{ a.name }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      {% endif %}
+
+      <!-- Format + Status -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Format <span class="text-danger">*</span></label>
+          <select name="format" class="form-select {% if form.format.errors %}is-invalid{% endif %}">
+            {% for val, label in form.fields.format.choices %}
+            <option value="{{ val }}" {% if form.format.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% for e in form.format.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Status <span class="text-danger">*</span></label>
+          <select name="status" class="form-select {% if form.status.errors %}is-invalid{% endif %}">
+            {% for val, label in form.fields.status.choices %}
+            <option value="{{ val }}" {% if form.status.value == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+          {% for e in form.status.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <!-- Location -->
+      <div class="mb-3">
+        <label class="form-label fw-semibold">Location <span class="text-danger">*</span></label>
+        <input type="text" name="location" value="{{ form.location.value|default:'' }}"
+               class="form-control {% if form.location.errors %}is-invalid{% endif %}"
+               placeholder="e.g. Bulawayo City Hall" required>
+        {% for e in form.location.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+      </div>
+
+      <!-- Dates -->
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Start Date <span class="text-danger">*</span></label>
+          <input type="date" name="start_date" value="{{ form.start_date.value|default:'' }}"
+                 class="form-control {% if form.start_date.errors %}is-invalid{% endif %}" required>
+          {% for e in form.start_date.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">End Date <span class="text-danger">*</span></label>
+          <input type="date" name="end_date" value="{{ form.end_date.value|default:'' }}"
+                 class="form-control {% if form.end_date.errors %}is-invalid{% endif %}" required>
+          {% for e in form.end_date.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <!-- Description -->
+      <div class="mb-0">
+        <label class="form-label fw-semibold">Description</label>
+        <textarea name="description" rows="3"
+                  class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                  placeholder="Optional — prizes, rules, special notes…">{{ form.description.value|default:'' }}</textarea>
+        {% for e in form.description.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+      </div>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <h6 class="fw-bold mb-3 text-uppercase" style="font-size:.75rem;letter-spacing:.06em;color:#888;">Format &amp; Fees</h6>
+
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Number of Rounds <span class="text-danger">*</span></label>
+          <input type="number" name="num_rounds" value="{{ form.num_rounds.value|default:'5' }}"
+                 class="form-control {% if form.num_rounds.errors %}is-invalid{% endif %}"
+                 min="1" max="20" required>
+          {% for e in form.num_rounds.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label fw-semibold">Max Players <span class="text-danger">*</span></label>
+          <input type="number" name="max_players" value="{{ form.max_players.value|default:'32' }}"
+                 class="form-control {% if form.max_players.errors %}is-invalid{% endif %}"
+                 min="2" max="512" required>
+          {% for e in form.max_players.errors %}<div class="invalid-feedback">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+
+      <div class="row g-3">
+        <div class="col-sm-4">
+          <label class="form-label fw-semibold">Currency</label>
+          <input type="text" name="currency" value="{{ form.currency.value|default:'USD' }}"
+                 class="form-control" maxlength="10">
+        </div>
+        <div class="col-sm-8">
+          <label class="form-label fw-semibold">Registration Fee</label>
+          <div class="input-group">
+            <span class="input-group-text" id="currencyLabel">{{ form.currency.value|default:'USD' }}</span>
+            <input type="number" name="registration_fee"
+                   value="{{ form.registration_fee.value|default:'0.00' }}"
+                   class="form-control {% if form.registration_fee.errors %}is-invalid{% endif %}"
+                   step="0.01" min="0">
+          </div>
+          <div class="form-text">Set to 0 for free entry.</div>
+          {% for e in form.registration_fee.errors %}<div class="text-danger small">{{ e }}</div>{% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <div class="d-flex gap-2 justify-content-end">
+      {% if tournament %}
+        <a href="{% url 'tournament_manage' tournament.pk %}" class="btn btn-outline-secondary">Cancel</a>
+      {% else %}
+        <a href="{% url 'tournament_list' %}" class="btn btn-outline-secondary">Cancel</a>
+      {% endif %}
+      <button type="submit" class="btn btn-chess px-4 fw-semibold">{{ action }}</button>
+    </div>
+
+  </form>
+</div>
+
+{% block extra_js %}
+<script>
+// Keep currency label in sync
+const currencyInput = document.querySelector('input[name="currency"]');
+const currencyLabel = document.getElementById('currencyLabel');
+if (currencyInput && currencyLabel) {
+  currencyInput.addEventListener('input', () => {
+    currencyLabel.textContent = currencyInput.value || 'USD';
+  });
+}
+</script>
+{% endblock %}
+{% endblock %}
