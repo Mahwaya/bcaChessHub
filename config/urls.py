@@ -12,6 +12,7 @@ urlpatterns = [
     path('tournaments/', include('tournaments.urls')),
     path('rankings/', include('members.urls')),
     path('dashboard/', dashboard, name='dashboard'),
+    path('matches/', include('matches.urls')),
     path('payments/', include('payments.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='registration/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='/'), name='logout'),

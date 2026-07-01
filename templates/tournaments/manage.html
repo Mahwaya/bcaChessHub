@@ -80,7 +80,7 @@
                 <th>White</th>
                 <th style="width:9rem;">Result</th>
                 <th>Black</th>
-                <th style="width:5rem;"></th>
+                <th style="width:6rem;" class="text-center">Lichess</th>
               </tr>
             </thead>
             <tbody>
@@ -123,9 +123,28 @@
                   {% endif %}
                 </td>
 
-                <td class="text-muted small text-center">
-                  {% if match.result == 'pending' and match.black_player %}
-                    <span class="text-warning">pending</span>
+                <!-- Lichess column -->
+                <td class="text-center">
+                  {% if match.lichess_game_id %}
+                    <a href="https://lichess.org/{{ match.lichess_game_id }}" target="_blank" rel="noopener"
+                       class="btn btn-sm btn-outline-secondary px-2 py-0" title="View on Lichess">
+                      ♞
+                    </a>
+                  {% elif match.black_player and match.result == 'pending' %}
+                    <button class="btn btn-sm btn-outline-secondary px-2 py-0"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#lichess-form-{{ match.pk }}"
+                            title="Link Lichess game">+♞</button>
+                    <div class="collapse mt-1" id="lichess-form-{{ match.pk }}">
+                      <form method="post" action="{% url 'link_lichess' match.pk %}" class="d-flex gap-1 mt-1">
+                        {% csrf_token %}
+                        <input type="text" name="lichess_url"
+                               class="form-control form-control-sm"
+                               placeholder="lichess.org/abc12345"
+                               style="min-width:160px;">
+                        <button type="submit" class="btn btn-sm btn-chess px-2">Link</button>
+                      </form>
+                    </div>
                   {% endif %}
                 </td>
               </tr>
