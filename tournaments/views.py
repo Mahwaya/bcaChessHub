@@ -1,8 +1,19 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.views.decorators.http import require_POST
 from .models import Tournament, TournamentRegistration, Round
 from matches.models import Match
+
+
+def _is_director(user, tournament):
+    """True if user may manage this tournament."""
+    if user.is_staff:
+        return True
+    if hasattr(user, 'member'):
+        m = user.member
+        return m.role == 'admin' and m.association_id == tournament.association_id
+    return False
 
 
 def tournament_list(request):
@@ -100,3 +111,116 @@ def tournament_round(request, pk, round_number):
         'rounds': rounds,
         'viewer_member': request.user.member if request.user.is_authenticated and hasattr(request.user, 'member') else None,
     })
+
+
+@login_required
+def tournament_manage(request, pk):
+    """Tournament director panel — start rounds, record results, confirm registrations."""
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+
+    if not _is_director(request.user, tournament):
+        messages.error(request, 'You do not have permission to manage this tournament.')
+        return redirect('tournament_detail', pk=pk)
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'set_status':
+            new_status = request.POST.get('status')
+            valid = [s[0] for s in Tournament.STATUS_CHOICES]
+            if new_status in valid:
+                tournament.status = new_status
+                tournament.save(update_fields=['status'])
+                messages.success(request, f'Status changed to "{tournament.get_status_display()}".')
+
+        elif action == 'confirm_reg':
+            reg = get_object_or_404(TournamentRegistration, pk=request.POST.get('reg_pk'), tournament=tournament)
+            reg.status = 'confirmed'
+            reg.save(update_fields=['status'])
+            messages.success(request, f'{reg.player} confirmed.')
+
+        elif action == 'confirm_all':
+            count = TournamentRegistration.objects.filter(tournament=tournament, status='pending').update(status='confirmed')
+            messages.success(request, f'{count} registration(s) confirmed.')
+
+        elif action == 'start_round':
+            from .services import create_next_round
+            try:
+                round_obj, pairings, bye_player, errors = create_next_round(tournament)
+                messages.success(request, f'Round {round_obj.number} started — {len(pairings)} board(s).')
+                if bye_player:
+                    messages.info(request, f'{bye_player} receives a full-point bye.')
+                for err in errors:
+                    messages.warning(request, err)
+            except ValueError as exc:
+                messages.error(request, str(exc))
+
+        elif action == 'complete_round':
+            round_obj = get_object_or_404(Round, pk=request.POST.get('round_pk'), tournament=tournament)
+            from .services import complete_round
+            try:
+                complete_round(round_obj)
+                messages.success(request, f'Round {round_obj.number} marked complete.')
+            except ValueError as exc:
+                messages.error(request, str(exc))
+
+        return redirect('tournament_manage', pk=pk)
+
+    # GET — build context
+    registrations = tournament.registrations.select_related('player__user').order_by('status', 'registered_at')
+    rounds = list(
+        tournament.rounds.prefetch_related(
+            'matches__white_player__user',
+            'matches__black_player__user',
+        ).order_by('number')
+    )
+    current_round = next((r for r in rounds if not r.is_complete), None)
+    completed_rounds = tournament.rounds.filter(is_complete=True).count()
+    can_start_round = (
+        tournament.status in ('registration_open', 'in_progress')
+        and current_round is None
+        and completed_rounds < tournament.num_rounds
+        and tournament.registrations.filter(status='confirmed').count() >= 2
+    )
+
+    return render(request, 'tournaments/manage.html', {
+        'tournament': tournament,
+        'registrations': registrations,
+        'rounds': rounds,
+        'current_round': current_round,
+        'can_start_round': can_start_round,
+        'result_choices': [rc for rc in Match.RESULT_CHOICES if rc[0] != 'pending'],
+        'status_choices': Tournament.STATUS_CHOICES,
+        'next_round_number': completed_rounds + 1,
+    })
+
+
+@login_required
+@require_POST
+def tournament_record_result(request, pk, match_pk):
+    """Record a match result from the director panel."""
+    tournament = get_object_or_404(Tournament, pk=pk)
+
+    if not _is_director(request.user, tournament):
+        messages.error(request, 'Permission denied.')
+        return redirect('tournament_manage', pk=pk)
+
+    match = get_object_or_404(Match, pk=match_pk, tournament=tournament)
+
+    if match.black_player is None:
+        messages.error(request, 'Cannot override a bye result.')
+        return redirect('tournament_manage', pk=pk)
+
+    result = request.POST.get('result')
+    valid = [rc[0] for rc in Match.RESULT_CHOICES if rc[0] != 'pending']
+    if result not in valid:
+        messages.error(request, f'Invalid result value.')
+        return redirect('tournament_manage', pk=pk)
+
+    if match.result != 'pending':
+        messages.warning(request, f'Board {match.board_number} result already recorded ({match.result}).')
+        return redirect('tournament_manage', pk=pk)
+
+    match.record_result(result)
+    messages.success(request, f'Board {match.board_number}: {match.get_result_display()} saved.')
+    return redirect('tournament_manage', pk=pk)

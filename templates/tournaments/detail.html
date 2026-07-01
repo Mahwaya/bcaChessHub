@@ -24,9 +24,9 @@
             </span>
             <span class="badge bg-light text-dark border">{{ tournament.get_format_display }}</span>
           </div>
-          {% if user.is_staff %}
-            <a href="/admin/tournaments/tournament/{{ tournament.pk }}/change/" class="btn btn-outline-secondary btn-sm">
-              <i class="bi bi-pencil"></i> Edit
+          {% if user.is_staff or user.member.role == 'admin' and user.member.association == tournament.association %}
+            <a href="{% url 'tournament_manage' tournament.pk %}" class="btn btn-chess btn-sm">
+              <i class="bi bi-gear"></i> Manage Tournament
             </a>
           {% endif %}
         </div>
