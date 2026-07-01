@@ -71,6 +71,10 @@ def create_next_round(tournament):
     round_obj.started_at = timezone.now()
     round_obj.save(update_fields=['started_at'])
 
+    # Fire pairing emails to all players
+    from notifications.email import send_round_pairings
+    send_round_pairings(round_obj)
+
     return round_obj, pairings, bye_player, errors
 
 
@@ -91,10 +95,15 @@ def complete_round(round_obj):
     round_obj.completed_at = timezone.now()
     round_obj.save(update_fields=['is_complete', 'completed_at'])
 
+    # Fire round-complete emails
+    from notifications.email import send_round_complete, send_tournament_complete
+    send_round_complete(round_obj)
+
     # Auto-complete tournament if this was the final round
     tournament = round_obj.tournament
     if round_obj.number >= tournament.num_rounds:
         tournament.status = 'completed'
         tournament.save(update_fields=['status'])
+        send_tournament_complete(tournament)
 
     return round_obj

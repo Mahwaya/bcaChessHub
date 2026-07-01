@@ -63,4 +63,6 @@ def tournament_register(request, pk):
     else:
         messages.info(request, 'You are already registered for this tournament.')
 
+    # Email sent when admin confirms (status → confirmed), not on initial pending
+
     return redirect('tournament_detail', pk=pk)

@@ -1,0 +1,105 @@
+{% extends 'email/base_email.html' %}
+
+{% block subject %}Round {{ round_number }} Pairings — {{ tournament.name }}{% endblock %}
+
+{% block body %}
+<h2 style="margin:0 0 8px;color:#1a1a2e;font-size:22px;">Round {{ round_number }} Pairings</h2>
+<p style="margin:0 0 24px;color:#666;font-size:14px;">{{ tournament.name }} &mdash; Your pairing is ready.</p>
+
+{% if is_bye %}
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e1;border-left:4px solid #f5a623;border-radius:4px;padding:20px;margin-bottom:24px;">
+    <tr>
+      <td>
+        <p style="margin:0;font-size:15px;color:#555;">
+          You have a <strong>bye</strong> in Round {{ round_number }}. You receive
+          <strong>1 point</strong> automatically. No game to play this round.
+        </p>
+      </td>
+    </tr>
+  </table>
+{% else %}
+  <!-- Your pairing highlight -->
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#1a1a2e;border-radius:8px;padding:20px;margin-bottom:24px;">
+    <tr>
+      <td align="center">
+        <p style="margin:0 0 12px;color:rgba(255,255,255,0.6);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Your Match — Board {{ board_number }}</p>
+        <table cellpadding="0" cellspacing="0">
+          <tr>
+            <td align="center" style="padding:0 16px;">
+              <div style="font-size:18px;font-weight:bold;color:{% if player_color == 'White' %}#f5a623{% else %}#a8dadc{% endif %};">
+                {{ white_player }}
+              </div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">♔ White</div>
+            </td>
+            <td style="padding:0 12px;">
+              <span style="font-size:22px;color:#e94560;font-weight:bold;">vs</span>
+            </td>
+            <td align="center" style="padding:0 16px;">
+              <div style="font-size:18px;font-weight:bold;color:{% if player_color == 'Black' %}#f5a623{% else %}#a8dadc{% endif %};">
+                {{ black_player }}
+              </div>
+              <div style="font-size:11px;color:rgba(255,255,255,0.4);margin-top:4px;">♚ Black</div>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:14px 0 0;color:rgba(255,255,255,0.5);font-size:12px;">
+          You are playing <strong style="color:{% if player_color == 'White' %}#f5a623{% else %}#a8dadc{% endif %};">{{ player_color }}</strong>
+        </p>
+      </td>
+    </tr>
+  </table>
+{% endif %}
+
+<!-- Tournament info -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:24px;">
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:120px;">Tournament</span>
+      <strong style="font-size:13px;color:#333;">{{ tournament.name }}</strong>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:120px;">Round</span>
+      <span style="font-size:13px;color:#333;">{{ round_number }} of {{ tournament.num_rounds }}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:120px;">Location</span>
+      <span style="font-size:13px;color:#333;">{{ tournament.location }}</span>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:120px;">Your score</span>
+      <span style="font-size:13px;color:#333;font-weight:bold;">{{ player_score }} pts</span>
+    </td>
+  </tr>
+</table>
+
+<!-- All pairings this round -->
+<p style="font-size:13px;font-weight:bold;color:#1a1a2e;margin:0 0 10px;">All Pairings — Round {{ round_number }}</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:8px;overflow:hidden;">
+  <tr style="background:#f8f9fa;">
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;">Bd</td>
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;">White</td>
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;text-align:center;">vs</td>
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;">Black</td>
+  </tr>
+  {% for pairing in all_pairings %}
+  <tr style="border-top:1px solid #f0f0f0;{% if pairing.is_yours %}background:#fff8f0;{% endif %}">
+    <td style="padding:8px 12px;font-size:13px;color:#999;">{{ pairing.board }}</td>
+    <td style="padding:8px 12px;font-size:13px;color:#333;{% if pairing.is_yours %}font-weight:bold;{% endif %}">{{ pairing.white }}</td>
+    <td style="padding:8px 12px;font-size:13px;color:#ccc;text-align:center;">—</td>
+    <td style="padding:8px 12px;font-size:13px;color:#333;{% if pairing.is_yours %}font-weight:bold;{% endif %}">{{ pairing.black }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<div style="text-align:center;margin-top:28px;">
+  <a href="{{ tournament_url }}" style="background:#e94560;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+    View Full Tournament
+  </a>
+</div>
+{% endblock %}

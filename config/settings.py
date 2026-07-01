@@ -132,3 +132,17 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CORS_ALLOW_ALL_ORIGINS = DEBUG  # Allow all in development only
 
 LOGIN_REDIRECT_URL = '/admin/'
+
+# ---- Email ----------------------------------------------------------------
+# Dev: emails print to terminal. Prod: set EMAIL_BACKEND to smtp and fill creds.
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'ChessHub <noreply@bcachesshub.co.zw>'
+SITE_BASE_URL = 'http://127.0.0.1:8000'
+
+# To send real emails, set these in .env and switch EMAIL_BACKEND:
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = 'smtp.gmail.com'
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = 'your@gmail.com'
+# EMAIL_HOST_PASSWORD = 'your-app-password'

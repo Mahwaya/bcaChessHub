@@ -1,0 +1,71 @@
+{% extends 'email/base_email.html' %}
+
+{% block subject %}Round {{ round_number }} Results — {{ tournament.name }}{% endblock %}
+
+{% block body %}
+<h2 style="margin:0 0 8px;color:#1a1a2e;font-size:22px;">Round {{ round_number }} Complete</h2>
+<p style="margin:0 0 24px;color:#666;font-size:14px;">{{ tournament.name }} &mdash; Here are your results.</p>
+
+<!-- Player result highlight -->
+{% if player_result %}
+<table width="100%" cellpadding="0" cellspacing="0" style="border-radius:8px;overflow:hidden;margin-bottom:24px;">
+  <tr style="background:{% if player_result == 'Win' %}#198754{% elif player_result == 'Loss' %}#dc3545{% elif player_result == 'Draw' %}#6c757d{% else %}#f5a623{% endif %};">
+    <td align="center" style="padding:20px;">
+      <p style="margin:0 0 4px;color:rgba(255,255,255,0.7);font-size:12px;text-transform:uppercase;letter-spacing:1px;">Your Result</p>
+      <p style="margin:0;color:white;font-size:28px;font-weight:bold;">{{ player_result }}</p>
+      <p style="margin:6px 0 0;color:rgba(255,255,255,0.8);font-size:13px;">vs {{ opponent_name }}</p>
+    </td>
+  </tr>
+</table>
+{% endif %}
+
+<!-- Score after round -->
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#f8f9fa;border-radius:8px;padding:16px;margin-bottom:24px;">
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:150px;">Score after Round {{ round_number }}</span>
+      <strong style="font-size:14px;color:#1a1a2e;">{{ player_score }} / {{ round_number }} pts</strong>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:150px;">Current Ranking</span>
+      <strong style="font-size:14px;color:#e94560;">#{{ player_rank }}</strong>
+    </td>
+  </tr>
+  <tr>
+    <td style="padding:4px 0;">
+      <span style="color:#999;font-size:13px;display:inline-block;width:150px;">Rounds remaining</span>
+      <span style="font-size:14px;color:#333;">{{ rounds_remaining }}</span>
+    </td>
+  </tr>
+</table>
+
+<!-- Full round results -->
+<p style="font-size:13px;font-weight:bold;color:#1a1a2e;margin:0 0 10px;">Round {{ round_number }} — All Results</p>
+<table width="100%" cellpadding="0" cellspacing="0" style="border:1px solid #eee;border-radius:8px;overflow:hidden;">
+  <tr style="background:#f8f9fa;">
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;">White</td>
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;text-align:center;">Result</td>
+    <td style="padding:8px 12px;font-size:12px;color:#999;font-weight:bold;">Black</td>
+  </tr>
+  {% for r in all_results %}
+  <tr style="border-top:1px solid #f0f0f0;{% if r.is_yours %}background:#fff8f0;{% endif %}">
+    <td style="padding:8px 12px;font-size:13px;color:#333;{% if r.is_yours %}font-weight:bold;{% endif %}">{{ r.white }}</td>
+    <td style="padding:8px 12px;font-size:13px;text-align:center;">
+      {% if r.result == 'white_win' %}<span style="color:#198754;font-weight:bold;">1 – 0</span>
+      {% elif r.result == 'black_win' %}<span style="color:#198754;font-weight:bold;">0 – 1</span>
+      {% elif r.result == 'draw' %}<span style="color:#6c757d;font-weight:bold;">½ – ½</span>
+      {% else %}<span style="color:#ccc;">—</span>{% endif %}
+    </td>
+    <td style="padding:8px 12px;font-size:13px;color:#333;{% if r.is_yours %}font-weight:bold;{% endif %}">{{ r.black }}</td>
+  </tr>
+  {% endfor %}
+</table>
+
+<div style="text-align:center;margin-top:28px;">
+  <a href="{{ tournament_url }}" style="background:#e94560;color:white;padding:12px 28px;border-radius:6px;text-decoration:none;font-weight:bold;font-size:14px;">
+    View Standings
+  </a>
+</div>
+{% endblock %}
