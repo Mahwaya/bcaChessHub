@@ -16,7 +16,7 @@ class Match(models.Model):
     tournament = models.ForeignKey(Tournament, on_delete=models.CASCADE, related_name='matches')
     round = models.ForeignKey(Round, on_delete=models.CASCADE, related_name='matches')
     white_player = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='matches_as_white')
-    black_player = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='matches_as_black')
+    black_player = models.ForeignKey(Member, on_delete=models.CASCADE, related_name='matches_as_black', null=True, blank=True)
     result = models.CharField(max_length=20, choices=RESULT_CHOICES, default='pending')
     scheduled_at = models.DateTimeField(blank=True, null=True)
     completed_at = models.DateTimeField(blank=True, null=True)

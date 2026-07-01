@@ -1,17 +1,54 @@
 from django.contrib import admin
+from django.contrib import messages
 from .models import Tournament, TournamentRegistration, Round
+from .services import create_next_round, complete_round
 
 
 class RoundInline(admin.TabularInline):
     model = Round
     extra = 0
-    readonly_fields = ['is_complete', 'started_at', 'completed_at']
+    readonly_fields = ['number', 'is_complete', 'started_at', 'completed_at']
+    can_delete = False
 
 
 class RegistrationInline(admin.TabularInline):
     model = TournamentRegistration
     extra = 0
     readonly_fields = ['registered_at']
+
+
+def action_generate_next_round(modeladmin, request, queryset):
+    for tournament in queryset:
+        try:
+            round_obj, pairings, bye_player, errors = create_next_round(tournament)
+            msg = (
+                f'{tournament.name}: Round {round_obj.number} generated — '
+                f'{len(pairings)} match(es).'
+            )
+            if bye_player:
+                msg += f' Bye: {bye_player}.'
+            if errors:
+                msg += f' Warnings: {"; ".join(errors)}'
+            messages.success(request, msg)
+        except ValueError as e:
+            messages.error(request, f'{tournament.name}: {e}')
+
+action_generate_next_round.short_description = 'Generate next round (Swiss pairing)'
+
+
+def action_complete_round(modeladmin, request, queryset):
+    for tournament in queryset:
+        last = tournament.rounds.order_by('-number').first()
+        if not last:
+            messages.error(request, f'{tournament.name}: No rounds to complete.')
+            continue
+        try:
+            complete_round(last)
+            messages.success(request, f'{tournament.name}: Round {last.number} marked complete.')
+        except ValueError as e:
+            messages.error(request, f'{tournament.name}: {e}')
+
+action_complete_round.short_description = 'Complete current round'
 
 
 @admin.register(Tournament)
@@ -22,6 +59,7 @@ class TournamentAdmin(admin.ModelAdmin):
     list_editable = ['status']
     readonly_fields = ['created_at']
     inlines = [RegistrationInline, RoundInline]
+    actions = [action_generate_next_round, action_complete_round]
 
     def player_count(self, obj):
         return obj.player_count
