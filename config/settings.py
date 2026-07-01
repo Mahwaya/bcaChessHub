@@ -11,10 +11,11 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-g4o@whz0=p=nl7+@*emd*
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver', cast=Csv())
 
-# Railway auto-injects RAILWAY_PUBLIC_DOMAIN — add it automatically
-_railway_domain = os.environ.get('RAILWAY_PUBLIC_DOMAIN')
-if _railway_domain and _railway_domain not in ALLOWED_HOSTS:
-    ALLOWED_HOSTS.append(_railway_domain)
+# Railway auto-injects these — add them automatically
+for _var in ('RAILWAY_PUBLIC_DOMAIN', 'RAILWAY_PRIVATE_DOMAIN'):
+    _val = os.environ.get(_var)
+    if _val and _val not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(_val)
 
 # ── Apps ──────────────────────────────────────────────────────────────────────
 INSTALLED_APPS = [
@@ -125,9 +126,7 @@ PAYNOW_SANDBOX = config('PAYNOW_SANDBOX', default=True, cast=bool)
 
 # ── Production security ───────────────────────────────────────────────────────
 if not DEBUG:
+    # Railway terminates SSL at its edge — don't redirect internally
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-    SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    SECURE_HSTS_SECONDS = 31536000
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
