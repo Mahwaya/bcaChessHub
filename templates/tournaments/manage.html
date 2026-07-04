@@ -267,7 +267,17 @@
         <div class="d-flex align-items-center justify-content-between py-1 border-bottom gap-2">
           <div class="small">
             <div class="fw-semibold">{{ reg.player.user.get_full_name|default:reg.player.user.username }}</div>
-            <div class="text-muted" style="font-size:0.75rem;">ELO {{ reg.player.rating }}</div>
+            <div class="text-muted" style="font-size:0.75rem;">
+              ELO {{ reg.player.rating }}
+              {% if tournament.registration_fee > 0 %}
+                &nbsp;·&nbsp;
+                {% if reg.has_paid %}
+                  <span class="text-success fw-semibold">💳 Paid</span>
+                {% else %}
+                  <span class="text-danger fw-semibold">⏳ Unpaid</span>
+                {% endif %}
+              {% endif %}
+            </div>
           </div>
           {% if reg.status == 'confirmed' %}
             <span class="badge bg-success">confirmed</span>
@@ -276,7 +286,14 @@
               {% csrf_token %}
               <input type="hidden" name="action" value="confirm_reg">
               <input type="hidden" name="reg_pk" value="{{ reg.pk }}">
-              <button type="submit" class="btn btn-sm btn-outline-success py-0 px-2">✓</button>
+              <button type="submit"
+                class="btn btn-sm {% if tournament.registration_fee > 0 and not reg.has_paid %}btn-outline-warning{% else %}btn-outline-success{% endif %} py-0 px-2"
+                {% if tournament.registration_fee > 0 and not reg.has_paid %}
+                  title="Player has not paid — confirm anyway?"
+                  onclick="return confirm('{{ reg.player.user.get_full_name }} has not paid the registration fee. Confirm anyway?')"
+                {% endif %}>
+                ✓
+              </button>
             </form>
           {% else %}
             <span class="badge bg-secondary">{{ reg.get_status_display }}</span>

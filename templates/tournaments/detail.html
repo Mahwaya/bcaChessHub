@@ -144,16 +144,47 @@
         {% if tournament.status == 'registration_open' %}
           {% if user.is_authenticated %}
             {% if already_registered %}
-              <button class="btn btn-secondary w-100" disabled>
-                <i class="bi bi-check-circle"></i> Already Registered
-              </button>
+              {% if tournament.registration_fee > 0 %}
+                {% if my_registration.status == 'confirmed' %}
+                  <button class="btn btn-success w-100" disabled>
+                    <i class="bi bi-check-circle-fill"></i> Confirmed
+                  </button>
+                {% elif my_payment and my_payment.status == 'completed' %}
+                  <button class="btn btn-outline-success w-100" disabled>
+                    <i class="bi bi-clock"></i> Payment Received — Awaiting Confirmation
+                  </button>
+                {% elif my_payment and my_payment.status == 'awaiting_approval' %}
+                  <a href="{% url 'payment_initiate' tournament.pk %}" class="btn btn-warning w-100">
+                    <i class="bi bi-phone"></i> Approve Payment on Phone
+                  </a>
+                {% else %}
+                  <a href="{% url 'payment_initiate' tournament.pk %}" class="btn btn-chess w-100">
+                    <i class="bi bi-credit-card"></i> Pay Registration Fee
+                  </a>
+                {% endif %}
+              {% else %}
+                {% if my_registration.status == 'confirmed' %}
+                  <button class="btn btn-success w-100" disabled>
+                    <i class="bi bi-check-circle-fill"></i> Confirmed
+                  </button>
+                {% else %}
+                  <button class="btn btn-secondary w-100" disabled>
+                    <i class="bi bi-clock"></i> Awaiting Confirmation
+                  </button>
+                {% endif %}
+              {% endif %}
             {% elif tournament.is_full %}
               <button class="btn btn-secondary w-100" disabled>Tournament Full</button>
             {% else %}
-              <form method="post" action="/tournaments/{{ tournament.pk }}/register/">
+              <form method="post" action="{% url 'tournament_register' tournament.pk %}">
                 {% csrf_token %}
                 <button class="btn btn-chess w-100">
-                  <i class="bi bi-person-plus"></i> Register Now
+                  <i class="bi bi-person-plus"></i>
+                  {% if tournament.registration_fee > 0 %}
+                    Register &amp; Pay {{ tournament.currency }} {{ tournament.registration_fee }}
+                  {% else %}
+                    Register Now (Free)
+                  {% endif %}
                 </button>
               </form>
             {% endif %}

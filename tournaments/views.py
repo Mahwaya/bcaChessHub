@@ -40,14 +40,26 @@ def tournament_detail(request, pk):
     rounds = tournament.rounds.prefetch_related('matches__white_player__user', 'matches__black_player__user').all()
 
     already_registered = False
+    my_registration = None
+    my_payment = None
+
     if request.user.is_authenticated and hasattr(request.user, 'member'):
-        already_registered = registrations.filter(player=request.user.member).exists()
+        member = request.user.member
+        my_registration = registrations.filter(player=member).first()
+        already_registered = my_registration is not None
+        if already_registered and tournament.registration_fee > 0:
+            from payments.models import Payment
+            my_payment = Payment.objects.filter(
+                member=member, tournament=tournament
+            ).order_by('-created_at').first()
 
     return render(request, 'tournaments/detail.html', {
         'tournament': tournament,
         'registrations': registrations,
         'rounds': rounds,
         'already_registered': already_registered,
+        'my_registration': my_registration,
+        'my_payment': my_payment,
     })
 
 
@@ -77,13 +89,16 @@ def tournament_register(request, pk):
         defaults={'status': 'pending'}
     )
 
-    if created:
-        messages.success(request, f'You have registered for {tournament.name}. Awaiting confirmation.')
-    else:
+    if not created:
         messages.info(request, 'You are already registered for this tournament.')
+        return redirect('tournament_detail', pk=pk)
 
-    # Email sent when admin confirms (status → confirmed), not on initial pending
+    # Paid tournament → send player straight to the payment page
+    if tournament.registration_fee > 0:
+        messages.info(request, f'Complete your payment to confirm your spot in {tournament.name}.')
+        return redirect('payment_initiate', tournament_pk=pk)
 
+    messages.success(request, f'You have registered for {tournament.name}. Awaiting confirmation.')
     return redirect('tournament_detail', pk=pk)
 
 
@@ -217,7 +232,22 @@ def tournament_manage(request, pk):
         return redirect('tournament_manage', pk=pk)
 
     # GET — build context
-    registrations = tournament.registrations.select_related('player__user').order_by('status', 'registered_at')
+    registrations = list(
+        tournament.registrations.select_related('player__user').order_by('status', 'registered_at')
+    )
+
+    # Annotate each registration with payment status (only relevant when fee > 0)
+    if tournament.registration_fee > 0:
+        from payments.models import Payment
+        paid_pks = set(
+            Payment.objects.filter(tournament=tournament, status='completed')
+            .values_list('member_id', flat=True)
+        )
+        for reg in registrations:
+            reg.has_paid = reg.player_id in paid_pks
+    else:
+        for reg in registrations:
+            reg.has_paid = True  # free tournament — treat everyone as paid
     rounds = list(
         tournament.rounds.prefetch_related(
             'matches__white_player__user',
