@@ -1,0 +1,222 @@
+{% extends 'base.html' %}
+{% block title %}{{ assoc.name }} — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+
+  <!-- Breadcrumb -->
+  <div class="text-muted small mb-3">
+    <a href="{% url 'association_list' %}" class="text-muted">&larr; All Associations</a>
+  </div>
+
+  <!-- Header card -->
+  <div class="card p-4 mb-4">
+    <div class="d-flex align-items-center gap-4 flex-wrap">
+
+      <!-- Logo -->
+      {% if assoc.logo %}
+        <img src="{{ assoc.logo.url }}" alt="{{ assoc.name }} logo"
+             style="width:90px;height:90px;object-fit:contain;border-radius:12px;flex-shrink:0;">
+      {% else %}
+        <div style="width:90px;height:90px;border-radius:12px;background:var(--chess-dark);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:2.8rem;flex-shrink:0;">
+          ♟
+        </div>
+      {% endif %}
+
+      <div class="flex-grow-1">
+        <h2 class="fw-bold mb-1">{{ assoc.name }}</h2>
+        <div class="text-muted small">
+          <i class="bi bi-geo-alt"></i> {{ assoc.city }}, {{ assoc.country }}
+          {% if assoc.founded_year %}
+            &nbsp;&middot;&nbsp; <i class="bi bi-calendar2"></i> Est. {{ assoc.founded_year }}
+          {% endif %}
+        </div>
+        <div class="mt-2 d-flex gap-3 flex-wrap" style="font-size:0.85rem;">
+          {% if assoc.email %}
+            <a href="mailto:{{ assoc.email }}" class="text-muted text-decoration-none">
+              <i class="bi bi-envelope"></i> {{ assoc.email }}
+            </a>
+          {% endif %}
+          {% if assoc.phone %}
+            <span class="text-muted"><i class="bi bi-telephone"></i> {{ assoc.phone }}</span>
+          {% endif %}
+          {% if assoc.website %}
+            <a href="{{ assoc.website }}" target="_blank" rel="noopener" class="text-muted text-decoration-none">
+              <i class="bi bi-globe"></i> Website
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Stats row -->
+  <div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4" style="color:var(--chess-accent);">{{ stats.members }}</div>
+        <div class="text-muted small">Members</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-success">{{ stats.players }}</div>
+        <div class="text-muted small">Players</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-warning">{{ stats.coaches }}</div>
+        <div class="text-muted small">Coaches</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4 text-info">{{ stats.tournaments }}</div>
+        <div class="text-muted small">Tournaments</div>
+      </div>
+    </div>
+    <div class="col-6 col-md-4 col-lg-2">
+      <div class="card p-3 text-center">
+        <div class="fw-bold fs-4" style="color:var(--chess-gold);">{{ stats.games }}</div>
+        <div class="text-muted small">Games Played</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-4">
+
+    <!-- Left column -->
+    <div class="col-lg-8">
+
+      <!-- Active / Upcoming tournaments -->
+      {% if active_tournaments or upcoming_tournaments %}
+      <div class="card p-4 mb-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-trophy"></i> Current Tournaments</h5>
+        {% for t in active_tournaments %}
+        <div class="d-flex justify-content-between align-items-center p-3 rounded mb-2"
+             style="background:#f8f9fa;">
+          <div>
+            <div class="fw-semibold">{{ t.name }}</div>
+            <div class="text-muted small">
+              <i class="bi bi-geo-alt"></i> {{ t.location }}
+              &nbsp;&middot;&nbsp;
+              <i class="bi bi-calendar"></i> {{ t.start_date|date:"d M Y" }}
+              &nbsp;&middot;&nbsp;
+              {{ t.num_rounds }} rounds
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge rounded-pill text-white badge-status-{{ t.status }}">
+              {{ t.get_status_display }}
+            </span>
+            <a href="{% url 'tournament_detail' t.pk %}" class="btn btn-chess btn-sm">View</a>
+          </div>
+        </div>
+        {% endfor %}
+
+        {% for t in upcoming_tournaments %}
+        <div class="d-flex justify-content-between align-items-center p-3 rounded mb-2"
+             style="background:#f8f9fa;">
+          <div>
+            <div class="fw-semibold">{{ t.name }}</div>
+            <div class="text-muted small">
+              <i class="bi bi-calendar"></i> {{ t.start_date|date:"d M Y" }}
+              &nbsp;&middot;&nbsp; {{ t.num_rounds }} rounds
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge bg-secondary">Upcoming</span>
+            <a href="{% url 'tournament_detail' t.pk %}" class="btn btn-outline-secondary btn-sm">View</a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <!-- Recent completed tournaments -->
+      {% if recent_tournaments %}
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3"><i class="bi bi-clock-history"></i> Recent Tournaments</h5>
+        <table class="table table-hover table-sm mb-0">
+          <thead class="table-light">
+            <tr>
+              <th>Tournament</th>
+              <th class="text-center">Rounds</th>
+              <th class="text-center">Players</th>
+              <th class="d-none d-md-table-cell">Date</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in recent_tournaments %}
+            <tr>
+              <td class="fw-semibold">{{ t.name }}</td>
+              <td class="text-center text-muted">{{ t.num_rounds }}</td>
+              <td class="text-center text-muted">{{ t.player_count }}</td>
+              <td class="d-none d-md-table-cell text-muted small">{{ t.end_date|date:"M Y" }}</td>
+              <td>
+                <a href="{% url 'tournament_standings' t.pk %}"
+                   class="btn btn-outline-secondary btn-sm py-0 px-2">Results</a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+
+      {% if not active_tournaments and not upcoming_tournaments and not recent_tournaments %}
+      <div class="card p-4 text-center text-muted">
+        <div style="font-size:2.5rem;">♟</div>
+        <p class="mt-2 mb-0">No tournaments yet.</p>
+      </div>
+      {% endif %}
+
+    </div>
+
+    <!-- Right column: top players -->
+    <div class="col-lg-4">
+      <div class="card p-4">
+        <h5 class="fw-bold mb-3">
+          <i class="bi bi-bar-chart"></i> Top Players
+        </h5>
+        {% if top_players %}
+        {% for member in top_players %}
+        <div class="d-flex align-items-center justify-content-between py-2
+                    {% if not forloop.last %}border-bottom{% endif %}">
+          <div class="d-flex align-items-center gap-2">
+            <span class="text-muted fw-bold" style="width:1.4rem;font-size:0.85rem;">
+              {% if forloop.counter == 1 %}🥇
+              {% elif forloop.counter == 2 %}🥈
+              {% elif forloop.counter == 3 %}🥉
+              {% else %}{{ forloop.counter }}{% endif %}
+            </span>
+            <div>
+              <a href="{% url 'player_profile' member.pk %}"
+                 class="fw-semibold text-decoration-none" style="font-size:0.9rem;">
+                {{ member.user.get_full_name|default:member.user.username }}
+              </a>
+              <div class="text-muted" style="font-size:0.75rem;">{{ member.get_role_display }}</div>
+            </div>
+          </div>
+          <span class="fw-bold" style="color:var(--chess-accent);">{{ member.rating }}</span>
+        </div>
+        {% endfor %}
+
+        <a href="{% url 'rankings' %}?association={{ assoc.pk }}"
+           class="btn btn-outline-secondary btn-sm w-100 mt-3">
+          Full Rankings
+        </a>
+        {% else %}
+          <p class="text-muted small mb-0">No ranked players yet.</p>
+        {% endif %}
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

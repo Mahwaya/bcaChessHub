@@ -40,10 +40,12 @@
       </div>
     </div>
     <div class="col-6 col-md-3">
-      <div class="card p-4">
-        <div style="font-size:2rem;font-weight:800;color:var(--chess-accent);">{{ stats.associations }}</div>
-        <div class="text-muted small mt-1">Associations</div>
-      </div>
+      <a href="{% url 'association_list' %}" class="text-decoration-none">
+        <div class="card p-4">
+          <div style="font-size:2rem;font-weight:800;color:var(--chess-accent);">{{ stats.associations }}</div>
+          <div class="text-muted small mt-1">Associations</div>
+        </div>
+      </a>
     </div>
   </div>
 

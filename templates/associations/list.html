@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% block title %}Chess Associations — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-5 mb-5">
+
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div>
+      <h3 class="fw-bold mb-0">Chess Associations</h3>
+      <div class="text-muted small">{{ rows|length }} association{{ rows|length|pluralize }} on ChessHub</div>
+    </div>
+  </div>
+
+  {% if rows %}
+  <div class="row g-4">
+    {% for row in rows %}
+    <div class="col-md-6 col-lg-4">
+      <div class="card p-4 h-100 d-flex flex-column">
+
+        <!-- Logo + name -->
+        <div class="d-flex align-items-center gap-3 mb-3">
+          {% if row.assoc.logo %}
+            <img src="{{ row.assoc.logo.url }}" alt="{{ row.assoc.name }} logo"
+                 style="width:56px;height:56px;object-fit:contain;border-radius:8px;">
+          {% else %}
+            <div style="width:56px;height:56px;border-radius:8px;
+                        background:var(--chess-dark);display:flex;align-items:center;
+                        justify-content:center;font-size:1.6rem;flex-shrink:0;">
+              ♟
+            </div>
+          {% endif %}
+          <div>
+            <h5 class="fw-bold mb-0">{{ row.assoc.name }}</h5>
+            <div class="text-muted small">
+              <i class="bi bi-geo-alt"></i> {{ row.assoc.city }}, {{ row.assoc.country }}
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="row g-2 text-center mb-3">
+          <div class="col-4">
+            <div class="fw-bold" style="color:var(--chess-accent);">{{ row.member_count }}</div>
+            <div class="text-muted" style="font-size:0.72rem;">Members</div>
+          </div>
+          <div class="col-4">
+            <div class="fw-bold" style="color:var(--chess-accent);">{{ row.tournament_count }}</div>
+            <div class="text-muted" style="font-size:0.72rem;">Tournaments</div>
+          </div>
+          <div class="col-4">
+            {% if row.active_tournaments > 0 %}
+              <div class="fw-bold text-success">{{ row.active_tournaments }}</div>
+              <div class="text-muted" style="font-size:0.72rem;">Active</div>
+            {% else %}
+              <div class="fw-bold text-muted">—</div>
+              <div class="text-muted" style="font-size:0.72rem;">Active</div>
+            {% endif %}
+          </div>
+        </div>
+
+        {% if row.assoc.founded_year %}
+        <div class="text-muted small mb-3">
+          <i class="bi bi-calendar2"></i> Founded {{ row.assoc.founded_year }}
+        </div>
+        {% endif %}
+
+        <a href="{% url 'association_detail' row.assoc.pk %}"
+           class="btn btn-chess btn-sm mt-auto">View Association</a>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  {% else %}
+  <div class="text-center py-5 text-muted">
+    <div style="font-size:3rem;">♟</div>
+    <p class="mt-2">No associations registered yet.</p>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
