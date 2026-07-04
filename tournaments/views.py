@@ -5,6 +5,12 @@ from django.views.decorators.http import require_POST
 from .models import Tournament, TournamentRegistration, Round
 from .forms import TournamentForm
 from matches.models import Match
+from notifications.email import (
+    send_registration_confirmed,
+    send_round_pairings,
+    send_round_complete,
+    send_tournament_complete,
+)
 
 
 def _is_director(user, tournament):
@@ -133,16 +139,38 @@ def tournament_manage(request, pk):
                 tournament.status = new_status
                 tournament.save(update_fields=['status'])
                 messages.success(request, f'Status changed to "{tournament.get_status_display()}".')
+                if new_status == 'completed':
+                    try:
+                        send_tournament_complete(tournament)
+                    except Exception:
+                        pass
 
         elif action == 'confirm_reg':
             reg = get_object_or_404(TournamentRegistration, pk=request.POST.get('reg_pk'), tournament=tournament)
             reg.status = 'confirmed'
             reg.save(update_fields=['status'])
             messages.success(request, f'{reg.player} confirmed.')
+            try:
+                send_registration_confirmed(reg)
+            except Exception:
+                pass
 
         elif action == 'confirm_all':
-            count = TournamentRegistration.objects.filter(tournament=tournament, status='pending').update(status='confirmed')
+            pending = list(
+                TournamentRegistration.objects.filter(
+                    tournament=tournament, status='pending'
+                ).select_related('player__user')
+            )
+            count = TournamentRegistration.objects.filter(
+                tournament=tournament, status='pending'
+            ).update(status='confirmed')
             messages.success(request, f'{count} registration(s) confirmed.')
+            for reg in pending:
+                reg.status = 'confirmed'
+                try:
+                    send_registration_confirmed(reg)
+                except Exception:
+                    pass
 
         elif action == 'start_round':
             from .services import create_next_round
@@ -153,6 +181,10 @@ def tournament_manage(request, pk):
                     messages.info(request, f'{bye_player} receives a full-point bye.')
                 for err in errors:
                     messages.warning(request, err)
+                try:
+                    send_round_pairings(round_obj)
+                except Exception:
+                    pass
             except ValueError as exc:
                 messages.error(request, str(exc))
 
@@ -162,6 +194,10 @@ def tournament_manage(request, pk):
             try:
                 complete_round(round_obj)
                 messages.success(request, f'Round {round_obj.number} marked complete.')
+                try:
+                    send_round_complete(round_obj)
+                except Exception:
+                    pass
             except ValueError as exc:
                 messages.error(request, str(exc))
 
