@@ -109,6 +109,83 @@ def complete_round(round_obj):
     return round_obj
 
 
+def compute_crosstable(tournament):
+    """
+    Return crosstable data for all confirmed players, ordered by current standings rank.
+
+    Returns a dict:
+      {
+        'players': [player, ...],        # ordered by rank
+        'rows': [
+          {
+            'rank': 1,
+            'player': <Member>,
+            'score': 3.5,
+            'cells': [
+              {'value': '×', 'type': 'diagonal'},
+              {'value': '1', 'type': 'win'},
+              {'value': '0', 'type': 'loss'},
+              {'value': '½', 'type': 'draw'},
+              {'value': '',  'type': 'empty'},
+              ...
+            ]
+          },
+          ...
+        ]
+      }
+    Returns None if there are no confirmed players.
+    """
+    from matches.models import Match
+
+    standings = compute_standings(tournament)
+    if not standings:
+        return None
+
+    players = [row['player'] for row in standings]
+    player_pks = {p.pk for p in players}
+    col_index = {p.pk: i for i, p in enumerate(players)}
+
+    # result_map[(row_pk, col_pk)] → display value from row-player's perspective
+    result_map = {}
+
+    for m in (
+        Match.objects
+        .filter(tournament=tournament, black_player__isnull=False)
+        .exclude(result='pending')
+    ):
+        w, b = m.white_player_id, m.black_player_id
+        if w not in player_pks or b not in player_pks:
+            continue
+        if m.result in ('white_win', 'black_forfeit'):
+            result_map[(w, b)] = ('1', 'win')
+            result_map[(b, w)] = ('0', 'loss')
+        elif m.result in ('black_win', 'white_forfeit'):
+            result_map[(w, b)] = ('0', 'loss')
+            result_map[(b, w)] = ('1', 'win')
+        elif m.result == 'draw':
+            result_map[(w, b)] = ('½', 'draw')
+            result_map[(b, w)] = ('½', 'draw')
+
+    rows = []
+    for st in standings:
+        p = st['player']
+        cells = []
+        for col_player in players:
+            if col_player.pk == p.pk:
+                cells.append({'value': '×', 'type': 'diagonal'})
+            else:
+                val, ctype = result_map.get((p.pk, col_player.pk), ('', 'empty'))
+                cells.append({'value': val, 'type': ctype})
+        rows.append({
+            'rank': st['rank'],
+            'player': p,
+            'score': st['score'],
+            'cells': cells,
+        })
+
+    return {'players': players, 'rows': rows}
+
+
 def compute_standings(tournament):
     """
     Return a list of standing dicts for all confirmed players in `tournament`,

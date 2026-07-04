@@ -100,6 +100,19 @@ def tournament_standings(request, pk):
     })
 
 
+def tournament_crosstable(request, pk):
+    """Public crosstable view for a tournament."""
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    from .services import compute_crosstable
+    crosstable = compute_crosstable(tournament)
+    rounds = tournament.rounds.order_by('number')
+    return render(request, 'tournaments/crosstable.html', {
+        'tournament': tournament,
+        'crosstable': crosstable,
+        'rounds': rounds,
+    })
+
+
 def tournament_round(request, pk, round_number):
     """Public pairings view for a single round."""
     tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)

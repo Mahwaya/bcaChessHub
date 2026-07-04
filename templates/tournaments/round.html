@@ -23,6 +23,9 @@
     <li class="nav-item">
       <a class="nav-link" href="{% url 'tournament_standings' tournament.pk %}">Standings</a>
     </li>
+    <li class="nav-item">
+      <a class="nav-link" href="{% url 'tournament_crosstable' tournament.pk %}">Crosstable</a>
+    </li>
     {% for r in rounds %}
     <li class="nav-item">
       <a class="nav-link{% if r.number == round.number %} active fw-semibold{% elif not r.is_complete %} text-muted{% endif %}"
