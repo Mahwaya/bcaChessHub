@@ -3,21 +3,38 @@
 {% block title %}Player Rankings — ChessHub{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
+<div class="container mt-5 mb-5">
 
   <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
     <h3 class="fw-bold mb-0">Player Rankings</h3>
     <span class="text-muted small">ELO Rating System · Updated after every match</span>
   </div>
 
-  <!-- Filter by association -->
-  <div class="mb-4 d-flex gap-2 flex-wrap">
-    <a href="/rankings/" class="btn btn-sm {% if not assoc_filter %}btn-chess{% else %}btn-outline-secondary{% endif %}">All Associations</a>
-    {% for assoc in associations %}
-      <a href="?association={{ assoc.pk }}" class="btn btn-sm {% if assoc_filter == assoc.pk|stringformat:'s' %}btn-chess{% else %}btn-outline-secondary{% endif %}">
-        {{ assoc.name }}
-      </a>
-    {% endfor %}
+  <!-- Search + association filters -->
+  <div class="card p-3 mb-4">
+    <form method="get" class="row g-2 align-items-end">
+      <div class="col-sm-5">
+        <input type="text" name="q" value="{{ search }}"
+               class="form-control form-control-sm"
+               placeholder="Search by name or username…">
+      </div>
+      <div class="col-sm-5">
+        <select name="association" class="form-select form-select-sm"
+                onchange="this.form.submit()">
+          <option value="">All Associations</option>
+          {% for assoc in associations %}
+            <option value="{{ assoc.pk }}"
+              {% if assoc_filter == assoc.pk|stringformat:'s' %}selected{% endif %}>
+              {{ assoc.name }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="col-sm-2 d-flex gap-1">
+        <button type="submit" class="btn btn-chess btn-sm">Search</button>
+        <a href="/rankings/" class="btn btn-outline-secondary btn-sm">Reset</a>
+      </div>
+    </form>
   </div>
 
   <div class="card">
@@ -34,16 +51,17 @@
         </thead>
         <tbody>
           {% for member in members %}
+          {% with rank=page_obj.start_index|add:forloop.counter0 %}
           <tr>
             <td class="text-center fw-bold">
-              {% if forloop.counter == 1 %}
+              {% if rank == 1 %}
                 <span style="color:#f5a623;font-size:1.2rem;">♛</span>
-              {% elif forloop.counter == 2 %}
+              {% elif rank == 2 %}
                 <span style="color:#aaa;font-size:1.1rem;">♟</span>
-              {% elif forloop.counter == 3 %}
+              {% elif rank == 3 %}
                 <span style="color:#cd7f32;font-size:1.1rem;">♟</span>
               {% else %}
-                {{ forloop.counter }}
+                {{ rank }}
               {% endif %}
             </td>
             <td>
@@ -59,11 +77,12 @@
               <span class="badge bg-light text-dark border">{{ member.get_role_display }}</span>
             </td>
           </tr>
+          {% endwith %}
           {% empty %}
           <tr>
             <td colspan="5" class="text-center text-muted py-4">
               <i class="bi bi-trophy" style="font-size:2rem;"></i>
-              <p class="mt-2 mb-0">No ranked players yet.</p>
+              <p class="mt-2 mb-0">No ranked players found.</p>
             </td>
           </tr>
           {% endfor %}
@@ -71,6 +90,8 @@
       </table>
     </div>
   </div>
+
+  {% include 'partials/pagination.html' %}
 
   <p class="text-muted small mt-3">
     <i class="bi bi-info-circle"></i>

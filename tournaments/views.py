@@ -1,6 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.views.decorators.http import require_POST
 from .models import Tournament, TournamentRegistration, Round
 from .forms import TournamentForm
@@ -25,11 +26,19 @@ def _is_director(user, tournament):
 
 def tournament_list(request):
     status_filter = request.GET.get('status')
-    tournaments = Tournament.objects.select_related('association').all()
+    qs = Tournament.objects.select_related('association').order_by('-start_date')
     if status_filter:
-        tournaments = tournaments.filter(status=status_filter)
+        qs = qs.filter(status=status_filter)
+
+    paginator = Paginator(qs, 12)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+    params    = request.GET.copy()
+    params.pop('page', None)
+
     return render(request, 'tournaments/list.html', {
-        'tournaments': tournaments,
+        'tournaments': page_obj,
+        'page_obj': page_obj,
+        'query_string': params.urlencode(),
         'status_filter': status_filter,
     })
 

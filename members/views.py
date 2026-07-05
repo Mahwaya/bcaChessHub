@@ -2,6 +2,7 @@ from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
+from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import Member, RatingHistory
 from .forms import SignupForm
@@ -175,8 +176,15 @@ def manage_members(request):
         'coaches':  all_members.filter(role='coach').count(),
     }
 
+    paginator = Paginator(qs, 25)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+    params    = request.GET.copy()
+    params.pop('page', None)
+
     return render(request, 'members/manage.html', {
-        'members': qs,
+        'members': page_obj,
+        'page_obj': page_obj,
+        'query_string': params.urlencode(),
         'summary': summary,
         'role_choices': Member.ROLE_CHOICES,
         'role_filter': role_filter,
@@ -249,17 +257,33 @@ def player_profile(request, pk):
 
 def rankings(request):
     assoc_filter = request.GET.get('association')
-    members = Member.objects.select_related('user', 'association').filter(
+    search       = request.GET.get('q', '').strip()
+
+    qs = Member.objects.select_related('user', 'association').filter(
         role='player', is_active=True
     ).order_by('-rating')
 
     if assoc_filter:
-        members = members.filter(association__pk=assoc_filter)
+        qs = qs.filter(association__pk=assoc_filter)
+    if search:
+        qs = qs.filter(
+            Q(user__first_name__icontains=search) |
+            Q(user__last_name__icontains=search) |
+            Q(user__username__icontains=search)
+        )
 
     associations = Association.objects.filter(is_active=True)
 
+    paginator = Paginator(qs, 25)
+    page_obj  = paginator.get_page(request.GET.get('page'))
+    params    = request.GET.copy()
+    params.pop('page', None)
+
     return render(request, 'members/rankings.html', {
-        'members': members,
+        'members': page_obj,
+        'page_obj': page_obj,
+        'query_string': params.urlencode(),
         'associations': associations,
         'assoc_filter': assoc_filter,
+        'search': search,
     })

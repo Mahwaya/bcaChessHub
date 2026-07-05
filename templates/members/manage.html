@@ -181,7 +181,8 @@
     </div>
   </div>
 
-  <p class="text-muted small mt-2">{{ members|length }} member{{ members|length|pluralize }} shown.</p>
+  {% include 'partials/pagination.html' %}
+  <p class="text-muted small mt-2">{{ page_obj.paginator.count }} member{{ page_obj.paginator.count|pluralize }} total.</p>
 
   {% else %}
   <div class="text-center py-5 text-muted">
