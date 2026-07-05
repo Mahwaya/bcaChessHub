@@ -13,11 +13,16 @@
     <div class="d-flex align-items-center gap-4 flex-wrap">
 
       <!-- Avatar -->
-      <div style="width:80px;height:80px;border-radius:50%;background:var(--chess-accent);
-                  display:flex;align-items:center;justify-content:center;
-                  font-size:2rem;color:white;font-weight:700;flex-shrink:0;">
-        {{ member.user.first_name|first|upper }}{{ member.user.last_name|first|upper }}
-      </div>
+      {% if member.profile_photo %}
+        <img src="{{ member.profile_photo.url }}" class="rounded-circle flex-shrink-0"
+             width="80" height="80" style="object-fit:cover;border:3px solid var(--chess-accent);">
+      {% else %}
+        <div style="width:80px;height:80px;border-radius:50%;background:var(--chess-accent);
+                    display:flex;align-items:center;justify-content:center;
+                    font-size:2rem;color:white;font-weight:700;flex-shrink:0;">
+          {{ member.user.first_name|first|upper }}{{ member.user.last_name|first|upper }}
+        </div>
+      {% endif %}
 
       <div class="flex-grow-1">
         <div class="d-flex align-items-center gap-2 flex-wrap">

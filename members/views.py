@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
 from .models import Member, RatingHistory
-from .forms import SignupForm
+from .forms import SignupForm, ProfileEditForm
 from associations.models import Association
 from matches.models import Match
 from notifications.models import Notification
@@ -286,6 +286,32 @@ def player_profile(request, pk):
         'chart_data': json.dumps(chart_data),
         'is_own_profile': request.user.is_authenticated and hasattr(request.user, 'member') and request.user.member.pk == member.pk,
     })
+
+
+@login_required
+def edit_profile(request):
+    if not hasattr(request.user, 'member'):
+        return redirect('home')
+
+    member = request.user.member
+    user   = request.user
+
+    if request.method == 'POST':
+        form = ProfileEditForm(request.POST, request.FILES)
+        if form.is_valid():
+            form.save(user, member)
+            messages.success(request, 'Profile updated.')
+            return redirect('dashboard')
+    else:
+        form = ProfileEditForm(initial={
+            'first_name':    user.first_name,
+            'last_name':     user.last_name,
+            'email':         user.email,
+            'phone':         member.phone,
+            'date_of_birth': member.date_of_birth,
+        })
+
+    return render(request, 'members/edit_profile.html', {'form': form, 'member': member})
 
 
 def rankings(request):
