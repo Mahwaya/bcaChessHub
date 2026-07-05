@@ -1,0 +1,26 @@
+{% extends 'email/base_email.html' %}
+
+{% block subject %}{{ subject }}{% endblock %}
+
+{% block body %}
+<p style="margin:0 0 8px 0;font-size:13px;color:#999;text-transform:uppercase;letter-spacing:0.5px;">
+  Announcement from {{ association.name }}
+</p>
+<h2 style="margin:0 0 24px 0;font-size:22px;color:#1a1a2e;">{{ subject }}</h2>
+
+<div style="font-size:15px;line-height:1.7;color:#333;">
+  {% for line in message.splitlines %}
+    {% if line %}
+      <p style="margin:0 0 12px 0;">{{ line }}</p>
+    {% else %}
+      <br>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<hr style="border:none;border-top:1px solid #eee;margin:28px 0;">
+
+<p style="margin:0;font-size:13px;color:#777;">
+  This announcement was sent by <strong>{{ sender_name }}</strong> on behalf of {{ association.name }}.
+</p>
+{% endblock %}

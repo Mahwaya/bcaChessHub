@@ -192,5 +192,86 @@
   </div>
   {% endif %}
 
+
+  <!-- Bulk Email Announcement -->
+  <div class="card p-4 mt-4">
+    <div class="d-flex justify-content-between align-items-center">
+      <div>
+        <h6 class="fw-bold mb-0">📢 Email All Members</h6>
+        <p class="text-muted small mb-0 mt-1">
+          Send a custom announcement to
+          {% if user.is_staff %}all members across all associations{% else %}all {{ summary.active }} active member{{ summary.active|pluralize }} of your association{% endif %}.
+        </p>
+      </div>
+      <button class="btn btn-outline-secondary btn-sm" type="button"
+              data-bs-toggle="collapse" data-bs-target="#announceForm" aria-expanded="false">
+        Compose ▾
+      </button>
+    </div>
+
+    <div class="collapse mt-4" id="announceForm">
+      <form method="post" id="announceFormEl">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="announce">
+
+        {% if user.is_staff %}
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Target Association</label>
+          <select name="association_pk" class="form-select form-select-sm">
+            <option value="">— All Associations —</option>
+            {% for assoc in all_associations %}
+            <option value="{{ assoc.pk }}">{{ assoc.name }}</option>
+            {% endfor %}
+          </select>
+          <div class="form-text">Leave blank to send to all active members across every association.</div>
+        </div>
+        {% endif %}
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Subject <span class="text-danger">*</span></label>
+          <input type="text" name="subject" class="form-control" maxlength="200" required
+                 placeholder="e.g. Club Blitz Tournament — This Saturday">
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold">Message <span class="text-danger">*</span></label>
+          <textarea name="body" class="form-control" rows="6" required
+                    placeholder="Write your announcement here. Each paragraph will be formatted in the email."></textarea>
+          <div class="form-text">Plain text. Blank lines become paragraph breaks in the email.</div>
+        </div>
+
+        <div class="d-flex gap-3 align-items-center flex-wrap">
+          <button type="button" class="btn btn-chess"
+                  onclick="confirmSend()">
+            📤 Send Announcement
+          </button>
+          <span class="text-muted small">
+            Recipients will receive a formatted HTML email from ChessHub.
+          </span>
+        </div>
+      </form>
+    </div>
+  </div>
+
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function confirmSend() {
+  const subject = document.querySelector('#announceFormEl [name="subject"]').value.trim();
+  const body    = document.querySelector('#announceFormEl [name="body"]').value.trim();
+  if (!subject || !body) {
+    alert('Please fill in both the subject and message before sending.');
+    return;
+  }
+  const assocSelect = document.querySelector('#announceFormEl [name="association_pk"]');
+  const target = assocSelect
+    ? (assocSelect.value ? assocSelect.options[assocSelect.selectedIndex].text : 'ALL associations')
+    : 'your association';
+  if (confirm(`Send "${subject}" to all active members of ${target}?\n\nThis cannot be undone.`)) {
+    document.getElementById('announceFormEl').submit();
+  }
+}
+</script>
 {% endblock %}

@@ -218,6 +218,32 @@ def send_round_complete(round_obj):
             _send(player.user, subject, html, 'result_posted')
 
 
+def send_announcement(association, subject, message, sender_name):
+    """
+    Send a custom announcement to all active members of an association.
+    Returns the number of emails dispatched.
+    """
+    from members.models import Member
+    members = Member.objects.filter(
+        association=association, is_active=True
+    ).select_related('user')
+
+    sent = 0
+    for member in members:
+        ctx = {
+            'association': association,
+            'subject': subject,
+            'message': message,
+            'sender_name': sender_name,
+            'dashboard_url': f'{BASE_URL}/dashboard/',
+        }
+        html = render_to_string('email/announcement.html', ctx)
+        _send(member.user, subject, html, 'general')
+        sent += 1
+
+    return sent
+
+
 def send_tournament_complete(tournament):
     """
     Email all players the final standings when the tournament concludes.

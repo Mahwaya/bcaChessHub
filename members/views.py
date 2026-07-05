@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login
 from django.contrib import messages
@@ -141,6 +141,36 @@ def manage_members(request):
             else:
                 messages.error(request, 'Only site staff can reset ELO ratings.')
 
+        elif action == 'announce':
+            subject = request.POST.get('subject', '').strip()
+            body    = request.POST.get('body', '').strip()
+            if not subject or not body:
+                messages.error(request, 'Subject and message body are both required.')
+                return redirect('manage_members')
+
+            from notifications.email import send_announcement
+            sender_name = request.user.get_full_name() or request.user.username
+
+            if request.user.is_staff:
+                assoc_pk = request.POST.get('association_pk')
+                if assoc_pk:
+                    from associations.models import Association as _Assoc
+                    assoc = get_object_or_404(_Assoc, pk=assoc_pk)
+                    sent = send_announcement(assoc, subject, body, sender_name)
+                    messages.success(request, f'Announcement sent to {sent} member(s) of {assoc.name}.')
+                else:
+                    from associations.models import Association as _Assoc
+                    total = 0
+                    for assoc in _Assoc.objects.filter(is_active=True):
+                        total += send_announcement(assoc, subject, body, sender_name)
+                    messages.success(request, f'Announcement sent to {total} member(s) across all associations.')
+            else:
+                assoc = request.user.member.association
+                sent  = send_announcement(assoc, subject, body, sender_name)
+                messages.success(request, f'Announcement sent to {sent} active member(s) of {assoc.name}.')
+
+            return redirect('manage_members')
+
         return redirect('manage_members')
 
     # GET — filters
@@ -181,6 +211,8 @@ def manage_members(request):
     params    = request.GET.copy()
     params.pop('page', None)
 
+    all_associations = Association.objects.filter(is_active=True) if request.user.is_staff else []
+
     return render(request, 'members/manage.html', {
         'members': page_obj,
         'page_obj': page_obj,
@@ -191,6 +223,7 @@ def manage_members(request):
         'status_filter': status_filter,
         'search': search,
         'can_reset_elo': request.user.is_staff,
+        'all_associations': all_associations,
     })
 
 
