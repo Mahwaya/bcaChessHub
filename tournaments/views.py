@@ -209,6 +209,53 @@ def tournament_manage(request, pk):
                 except Exception:
                     pass
 
+        elif action == 'set_seeds':
+            if tournament.rounds.exists():
+                messages.error(request, 'Seeds cannot be changed after rounds have started.')
+            else:
+                confirmed = list(
+                    TournamentRegistration.objects.filter(tournament=tournament, status='confirmed')
+                )
+                seen, updates, errors = set(), [], []
+                for reg in confirmed:
+                    raw = request.POST.get(f'seed_{reg.pk}', '').strip()
+                    if not raw:
+                        continue
+                    try:
+                        seed = int(raw)
+                        if seed < 1:
+                            raise ValueError
+                    except ValueError:
+                        errors.append(f'Invalid seed value for {reg.player}.')
+                        continue
+                    if seed in seen:
+                        errors.append(f'Duplicate seed #{seed} — each player needs a unique number.')
+                        continue
+                    seen.add(seed)
+                    updates.append((reg, seed))
+                if errors:
+                    for e in errors:
+                        messages.error(request, e)
+                else:
+                    for reg, seed in updates:
+                        reg.seed_number = seed
+                        reg.save(update_fields=['seed_number'])
+                    messages.success(request, f'Seeds saved for {len(updates)} player(s).')
+
+        elif action == 'auto_seed':
+            if tournament.rounds.exists():
+                messages.error(request, 'Seeds cannot be changed after rounds have started.')
+            else:
+                confirmed = list(
+                    TournamentRegistration.objects.filter(tournament=tournament, status='confirmed')
+                    .select_related('player')
+                    .order_by('-player__rating')
+                )
+                for i, reg in enumerate(confirmed, start=1):
+                    reg.seed_number = i
+                    reg.save(update_fields=['seed_number'])
+                messages.success(request, f'{len(confirmed)} players auto-seeded by ELO (highest = seed 1).')
+
         elif action == 'start_round':
             from .services import create_next_round
             try:
@@ -272,6 +319,12 @@ def tournament_manage(request, pk):
         and tournament.registrations.filter(status='confirmed').count() >= 2
     )
 
+    no_rounds_yet = len(rounds) == 0
+    confirmed_seeding = sorted(
+        [r for r in registrations if r.status == 'confirmed'],
+        key=lambda r: (r.seed_number or 9999, -r.player.rating),
+    )
+
     return render(request, 'tournaments/manage.html', {
         'tournament': tournament,
         'registrations': registrations,
@@ -281,6 +334,8 @@ def tournament_manage(request, pk):
         'result_choices': [rc for rc in Match.RESULT_CHOICES if rc[0] != 'pending'],
         'status_choices': Tournament.STATUS_CHOICES,
         'next_round_number': completed_rounds + 1,
+        'no_rounds_yet': no_rounds_yet,
+        'confirmed_seeding': confirmed_seeding,
     })
 
 

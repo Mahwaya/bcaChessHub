@@ -258,7 +258,49 @@
         {% endif %}
       </div>
 
-      <!-- ⑤ Registrations -->
+      <!-- ⑤ Seeding (only before round 1) -->
+      {% if no_rounds_yet and confirmed_seeding %}
+      <div class="card p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-1">
+          <h6 class="fw-bold mb-0">🎯 Player Seeding</h6>
+          <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="action" value="auto_seed">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"
+                    onclick="return confirm('Auto-seed all {{ confirmed_seeding|length }} players by ELO (highest ELO = seed 1)?')">
+              ⚡ Auto by ELO
+            </button>
+          </form>
+        </div>
+        <p class="text-muted small mb-3">
+          Set seed numbers before starting round 1. Seeds influence Swiss pairings — seed 1 meets seed 2 in round 1.
+        </p>
+
+        <form method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="set_seeds">
+          <div class="d-flex flex-column gap-1">
+            {% for reg in confirmed_seeding %}
+            <div class="d-flex align-items-center gap-2 py-1" style="border-bottom:1px solid #f0f0f0;">
+              <input type="number" name="seed_{{ reg.pk }}"
+                     value="{{ reg.seed_number|default:'' }}"
+                     min="1" max="{{ confirmed_seeding|length }}"
+                     class="form-control form-control-sm text-center fw-bold"
+                     style="width:56px;color:var(--chess-accent);"
+                     placeholder="—">
+              <div class="flex-grow-1 small">
+                <div class="fw-semibold">{{ reg.player.user.get_full_name|default:reg.player.user.username }}</div>
+                <div class="text-muted" style="font-size:0.72rem;">ELO {{ reg.player.rating }}</div>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          <button type="submit" class="btn btn-chess btn-sm w-100 mt-3">💾 Save Seeds</button>
+        </form>
+      </div>
+      {% endif %}
+
+      <!-- ⑥ Registrations -->
       <div class="card p-4">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h6 class="fw-bold mb-0">
@@ -277,7 +319,12 @@
         {% for reg in registrations %}
         <div class="d-flex align-items-center justify-content-between py-1 border-bottom gap-2">
           <div class="small">
-            <div class="fw-semibold">{{ reg.player.user.get_full_name|default:reg.player.user.username }}</div>
+            <div class="fw-semibold">
+              {% if reg.seed_number %}
+                <span class="text-muted me-1" style="font-size:0.72rem;">#{{ reg.seed_number }}</span>
+              {% endif %}
+              {{ reg.player.user.get_full_name|default:reg.player.user.username }}
+            </div>
             <div class="text-muted" style="font-size:0.75rem;">
               ELO {{ reg.player.rating }}
               {% if tournament.registration_fee > 0 %}
