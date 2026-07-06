@@ -8,7 +8,7 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.views.decorators.http import require_POST
 
-from .models import Match
+from .models import Match, Challenge
 
 
 def match_detail(request, match_pk):
@@ -130,5 +130,140 @@ def link_lichess(request, match_pk):
             messages.success(request, f'Game {game_id} linked (game may still be in progress).')
         else:
             messages.success(request, f'Game {game_id} linked successfully.')
+
+    return redirect('match_detail', match_pk=match_pk)
+
+
+# ── Challenge views ────────────────────────────────────────────────────────────
+
+@login_required
+def challenge_list(request):
+    if not hasattr(request.user, 'member'):
+        return redirect('home')
+    member = request.user.member
+    received = Challenge.objects.filter(opponent=member).select_related('challenger__user')
+    sent     = Challenge.objects.filter(challenger=member).select_related('opponent__user')
+    return render(request, 'matches/challenges/list.html', {
+        'received': received,
+        'sent': sent,
+        'pending_count': received.filter(status='pending').count(),
+    })
+
+
+@login_required
+@require_POST
+def challenge_send(request, opponent_pk):
+    from members.models import Member as MemberModel
+    if not hasattr(request.user, 'member'):
+        messages.error(request, 'You need a member profile to send challenges.')
+        return redirect('rankings')
+
+    challenger = request.user.member
+    opponent   = get_object_or_404(MemberModel, pk=opponent_pk, is_active=True)
+
+    if challenger == opponent:
+        messages.error(request, "You can't challenge yourself.")
+        return redirect('player_profile', pk=opponent_pk)
+
+    if Challenge.objects.filter(challenger=challenger, opponent=opponent, status='pending').exists():
+        messages.info(request, f'You already have a pending challenge with {opponent}.')
+        return redirect('player_profile', pk=opponent_pk)
+
+    msg = request.POST.get('message', '').strip()
+    Challenge.objects.create(challenger=challenger, opponent=opponent, message=msg)
+
+    from notifications.models import Notification
+    Notification.objects.create(
+        recipient=opponent.user,
+        type='general',
+        message=f'{challenger.user.get_full_name() or challenger.user.username} has challenged you to a rated match!',
+    )
+    messages.success(request, f'Challenge sent to {opponent}!')
+    return redirect('player_profile', pk=opponent_pk)
+
+
+@login_required
+@require_POST
+def challenge_respond(request, challenge_pk):
+    if not hasattr(request.user, 'member'):
+        return redirect('home')
+    challenge = get_object_or_404(Challenge, pk=challenge_pk, opponent=request.user.member, status='pending')
+    action = request.POST.get('action')
+    from django.utils import timezone
+
+    if action == 'accept':
+        challenge.status      = 'accepted'
+        challenge.responded_at = timezone.now()
+        challenge.save(update_fields=['status', 'responded_at'])
+        from notifications.models import Notification
+        Notification.objects.create(
+            recipient=challenge.challenger.user,
+            type='general',
+            message=f'{challenge.opponent.user.get_full_name() or challenge.opponent.user.username} accepted your challenge!',
+        )
+        messages.success(request, 'Challenge accepted! Arrange your game and come back to record the result.')
+    elif action == 'decline':
+        challenge.status      = 'declined'
+        challenge.responded_at = timezone.now()
+        challenge.save(update_fields=['status', 'responded_at'])
+        from notifications.models import Notification
+        Notification.objects.create(
+            recipient=challenge.challenger.user,
+            type='general',
+            message=f'{challenge.opponent.user.get_full_name() or challenge.opponent.user.username} declined your challenge.',
+        )
+        messages.info(request, 'Challenge declined.')
+
+    return redirect('challenge_list')
+
+
+@login_required
+@require_POST
+def challenge_record_result(request, challenge_pk):
+    if not hasattr(request.user, 'member'):
+        return redirect('home')
+    member    = request.user.member
+    challenge = get_object_or_404(Challenge, pk=challenge_pk, status='accepted')
+
+    if member not in (challenge.challenger, challenge.opponent):
+        messages.error(request, 'Only the players in this challenge can record the result.')
+        return redirect('challenge_list')
+
+    result = request.POST.get('result')
+    if result not in ('challenger_win', 'opponent_win', 'draw'):
+        messages.error(request, 'Invalid result.')
+        return redirect('challenge_list')
+
+    challenge.record_result(result)
+
+    winner_name = (
+        challenge.challenger.user.get_full_name() or challenge.challenger.user.username
+        if result == 'challenger_win' else
+        challenge.opponent.user.get_full_name() or challenge.opponent.user.username
+        if result == 'opponent_win' else None
+    )
+    msg = f'Result recorded — {"Draw" if not winner_name else winner_name + " wins"}. ELO ratings updated.'
+    messages.success(request, msg)
+    return redirect('challenge_detail', challenge_pk=challenge_pk)
+
+
+@login_required
+def challenge_detail(request, challenge_pk):
+    if not hasattr(request.user, 'member'):
+        return redirect('home')
+    member    = request.user.member
+    challenge = get_object_or_404(
+        Challenge.objects.select_related('challenger__user', 'opponent__user'),
+        pk=challenge_pk,
+    )
+    if member not in (challenge.challenger, challenge.opponent):
+        messages.error(request, 'You are not part of this challenge.')
+        return redirect('challenge_list')
+
+    is_challenger = member == challenge.challenger
+    return render(request, 'matches/challenges/detail.html', {
+        'challenge': challenge,
+        'is_challenger': is_challenger,
+    })
 
     return redirect('tournament_manage', pk=tournament.pk)

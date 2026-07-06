@@ -50,6 +50,20 @@
       <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">
         My Dashboard
       </a>
+      {% elif user.is_authenticated and user.member %}
+      <div>
+        <button class="btn btn-chess btn-sm" data-bs-toggle="collapse" data-bs-target="#challengeForm">
+          ⚔ Challenge
+        </button>
+        <div class="collapse mt-2" id="challengeForm">
+          <form method="post" action="{% url 'challenge_send' member.pk %}" style="min-width:280px;">
+            {% csrf_token %}
+            <textarea name="message" class="form-control form-control-sm mb-2" rows="2"
+                      placeholder="Optional message to your opponent…" maxlength="300"></textarea>
+            <button type="submit" class="btn btn-chess btn-sm w-100">Send Challenge</button>
+          </form>
+        </div>
+      </div>
       {% endif %}
     </div>
   </div>

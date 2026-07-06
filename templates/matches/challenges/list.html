@@ -1,0 +1,128 @@
+{% extends 'base.html' %}
+{% block title %}Challenges — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:760px;">
+
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="fw-bold mb-0">⚔ Challenges</h4>
+      {% if pending_count %}
+        <p class="text-muted small mb-0">
+          <span class="badge rounded-pill" style="background:var(--chess-accent);">{{ pending_count }}</span>
+          pending response{{ pending_count|pluralize }}
+        </p>
+      {% else %}
+        <p class="text-muted small mb-0">No pending responses</p>
+      {% endif %}
+    </div>
+    <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary btn-sm">← Dashboard</a>
+  </div>
+
+  {% for msg in messages %}
+  <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2 mb-3" role="alert">
+    {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  </div>
+  {% endfor %}
+
+  <!-- ── Inbox ──────────────────────────────────────────── -->
+  <h6 class="fw-bold mb-2 text-muted text-uppercase" style="font-size:0.78rem;letter-spacing:0.5px;">
+    Received ({{ received.count }})
+  </h6>
+  {% if received %}
+  <div class="d-flex flex-column gap-2 mb-4">
+    {% for c in received %}
+    <div class="card px-4 py-3 {% if c.status == 'pending' %}border-start border-3{% endif %}"
+         style="{% if c.status == 'pending' %}border-left-color:var(--chess-accent) !important;{% endif %}">
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div>
+          <span class="fw-semibold">
+            <a href="{% url 'player_profile' c.challenger.pk %}" class="text-decoration-none">
+              {{ c.challenger.user.get_full_name|default:c.challenger.user.username }}
+            </a>
+          </span>
+          <span class="text-muted small ms-2">challenged you</span>
+          {% if c.message %}
+            <div class="text-muted small mt-1 fst-italic">"{{ c.message }}"</div>
+          {% endif %}
+          <div class="text-muted mt-1" style="font-size:0.75rem;">
+            {{ c.created_at|date:"d M Y, H:i" }}
+            &middot; ELO {{ c.challenger.rating }}
+          </div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center flex-wrap">
+          {% if c.status == 'pending' %}
+            <form method="post" action="{% url 'challenge_respond' c.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="accept">
+              <button class="btn btn-chess btn-sm">✓ Accept</button>
+            </form>
+            <form method="post" action="{% url 'challenge_respond' c.pk %}">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="decline">
+              <button class="btn btn-outline-danger btn-sm">✗ Decline</button>
+            </form>
+          {% elif c.status == 'accepted' %}
+            <span class="badge bg-success">Accepted</span>
+            <a href="{% url 'challenge_detail' c.pk %}" class="btn btn-outline-secondary btn-sm">Record result</a>
+          {% elif c.status == 'completed' %}
+            <span class="badge bg-secondary">Completed</span>
+            <a href="{% url 'challenge_detail' c.pk %}" class="btn btn-outline-secondary btn-sm" style="font-size:0.78rem;">View</a>
+          {% elif c.status == 'declined' %}
+            <span class="badge bg-light text-dark border">Declined</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-muted small mb-4">No challenges received yet.</div>
+  {% endif %}
+
+  <!-- ── Sent ───────────────────────────────────────────── -->
+  <h6 class="fw-bold mb-2 text-muted text-uppercase" style="font-size:0.78rem;letter-spacing:0.5px;">
+    Sent ({{ sent.count }})
+  </h6>
+  {% if sent %}
+  <div class="d-flex flex-column gap-2">
+    {% for c in sent %}
+    <div class="card px-4 py-3">
+      <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap">
+        <div>
+          <span class="fw-semibold">
+            <a href="{% url 'player_profile' c.opponent.pk %}" class="text-decoration-none">
+              {{ c.opponent.user.get_full_name|default:c.opponent.user.username }}
+            </a>
+          </span>
+          <span class="text-muted small ms-2">ELO {{ c.opponent.rating }}</span>
+          {% if c.message %}
+            <div class="text-muted small mt-1 fst-italic">"{{ c.message }}"</div>
+          {% endif %}
+          <div class="text-muted mt-1" style="font-size:0.75rem;">Sent {{ c.created_at|date:"d M Y, H:i" }}</div>
+        </div>
+
+        <div class="d-flex gap-2 align-items-center">
+          {% if c.status == 'pending' %}
+            <span class="badge bg-warning text-dark">Awaiting response</span>
+          {% elif c.status == 'accepted' %}
+            <span class="badge bg-success">Accepted</span>
+            <a href="{% url 'challenge_detail' c.pk %}" class="btn btn-outline-secondary btn-sm">Record result</a>
+          {% elif c.status == 'completed' %}
+            <span class="badge bg-secondary">Completed</span>
+            <a href="{% url 'challenge_detail' c.pk %}" class="btn btn-outline-secondary btn-sm" style="font-size:0.78rem;">View</a>
+          {% elif c.status == 'declined' %}
+            <span class="badge bg-light text-dark border">Declined</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="text-muted small">No challenges sent yet. Visit a player's profile to send one.</div>
+  {% endif %}
+
+</div>
+{% endblock %}
