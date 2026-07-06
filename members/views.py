@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth import login
+from django.contrib.auth import login, update_session_auth_hash
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
@@ -286,6 +286,21 @@ def player_profile(request, pk):
         'chart_data': json.dumps(chart_data),
         'is_own_profile': request.user.is_authenticated and hasattr(request.user, 'member') and request.user.member.pk == member.pk,
     })
+
+
+@login_required
+def change_password(request):
+    from django.contrib.auth.forms import PasswordChangeForm
+    if request.method == 'POST':
+        form = PasswordChangeForm(request.user, request.POST)
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)  # keep user logged in
+            messages.success(request, 'Password changed successfully.')
+            return redirect('dashboard')
+    else:
+        form = PasswordChangeForm(request.user)
+    return render(request, 'members/change_password.html', {'form': form})
 
 
 @login_required
