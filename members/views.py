@@ -289,6 +289,103 @@ def player_profile(request, pk):
 
 
 @login_required
+def admin_stats(request):
+    if not (request.user.is_staff or (hasattr(request.user, 'member') and request.user.member.role == 'admin')):
+        messages.error(request, 'Only administrators can view the stats dashboard.')
+        return redirect('dashboard')
+
+    from django.db.models import Sum, Count
+    from tournaments.models import Tournament, TournamentRegistration
+    from payments.models import Payment
+    from matches.models import Match
+
+    # Determine scope
+    is_staff = request.user.is_staff
+    assoc = None if is_staff else request.user.member.association
+
+    def mfilter(**kw):
+        return kw if is_staff else {'association': assoc, **kw}
+
+    def tfilter(**kw):
+        return kw if is_staff else {'association': assoc, **kw}
+
+    # ── Members ──────────────────────────────────────────────
+    member_qs = Member.objects.filter(**mfilter())
+    member_stats = {
+        'total':    member_qs.count(),
+        'active':   member_qs.filter(is_active=True).count(),
+        'players':  member_qs.filter(role='player', is_active=True).count(),
+        'coaches':  member_qs.filter(role='coach', is_active=True).count(),
+        'admins':   member_qs.filter(role='admin', is_active=True).count(),
+    }
+
+    # ── Tournaments ───────────────────────────────────────────
+    t_qs = Tournament.objects.filter(**tfilter())
+    tournament_stats = {
+        'total':      t_qs.count(),
+        'active':     t_qs.filter(status__in=['registration_open', 'in_progress']).count(),
+        'in_progress':t_qs.filter(status='in_progress').count(),
+        'open':       t_qs.filter(status='registration_open').count(),
+        'completed':  t_qs.filter(status='completed').count(),
+        'upcoming':   t_qs.filter(status='upcoming').count(),
+    }
+
+    # ── Registrations ─────────────────────────────────────────
+    reg_qs = TournamentRegistration.objects.filter(**({'tournament__association': assoc} if not is_staff else {}))
+    reg_stats = {
+        'total':     reg_qs.count(),
+        'confirmed': reg_qs.filter(status='confirmed').count(),
+        'pending':   reg_qs.filter(status='pending').count(),
+    }
+
+    # ── Payments ──────────────────────────────────────────────
+    pay_qs = Payment.objects.filter(**({'member__association': assoc} if not is_staff else {}))
+    revenue = pay_qs.filter(status='completed').aggregate(total=Sum('amount'))['total'] or 0
+    payment_stats = {
+        'completed':        pay_qs.filter(status='completed').count(),
+        'pending':          pay_qs.filter(status__in=['pending', 'awaiting_approval']).count(),
+        'revenue':          revenue,
+        'revenue_currency': 'USD',
+    }
+
+    # ── Matches ───────────────────────────────────────────────
+    match_filter = {} if is_staff else {'tournament__association': assoc}
+    match_qs = Match.objects.filter(**match_filter)
+    match_stats = {
+        'total':   match_qs.exclude(result='pending').count(),
+        'pending': match_qs.filter(result='pending').count(),
+    }
+
+    # ── Recent activity ───────────────────────────────────────
+    recent_regs = (
+        reg_qs.select_related('player__user', 'tournament')
+        .order_by('-registered_at')[:10]
+    )
+    recent_payments = (
+        pay_qs.select_related('member__user', 'tournament')
+        .order_by('-created_at')[:8]
+    )
+    active_tournaments = (
+        t_qs.filter(status__in=['registration_open', 'in_progress'])
+        .select_related('association')
+        .order_by('start_date')
+    )
+
+    return render(request, 'members/admin_stats.html', {
+        'assoc': assoc,
+        'is_staff': is_staff,
+        'member_stats': member_stats,
+        'tournament_stats': tournament_stats,
+        'reg_stats': reg_stats,
+        'payment_stats': payment_stats,
+        'match_stats': match_stats,
+        'recent_regs': recent_regs,
+        'recent_payments': recent_payments,
+        'active_tournaments': active_tournaments,
+    })
+
+
+@login_required
 def change_password(request):
     from django.contrib.auth.forms import PasswordChangeForm
     if request.method == 'POST':
