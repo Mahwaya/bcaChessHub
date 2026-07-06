@@ -49,6 +49,17 @@
         <li class="nav-item"><a class="nav-link" href="/associations/">Associations</a></li>
         {% if user.is_authenticated %}
           <li class="nav-item"><a class="nav-link" href="/dashboard/">Dashboard</a></li>
+          <li class="nav-item">
+            <a class="nav-link position-relative" href="{% url 'notification_centre' %}" title="Notifications">
+              <i class="bi bi-bell"></i>
+              {% if unread_notification_count %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill"
+                      style="background:var(--chess-accent);font-size:0.6rem;">
+                  {{ unread_notification_count }}
+                </span>
+              {% endif %}
+            </a>
+          </li>
           {% if user.is_staff %}
             <li class="nav-item"><a class="nav-link" href="/admin/"><i class="bi bi-gear"></i> Admin</a></li>
           {% endif %}
