@@ -18,6 +18,17 @@
       <a href="{% url 'tournament_edit' tournament.pk %}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-pencil"></i> Edit
       </a>
+      <div class="dropdown">
+        <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+          <i class="bi bi-download"></i> Export
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="{% url 'export_print' tournament.pk %}" target="_blank">🖨 Print / PDF Report</a></li>
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="{% url 'export_standings' tournament.pk %}">📊 Standings CSV</a></li>
+          <li><a class="dropdown-item" href="{% url 'export_pairings' tournament.pk %}">♟ Pairings CSV</a></li>
+        </ul>
+      </div>
     </div>
   </div>
 

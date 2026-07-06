@@ -24,11 +24,24 @@
             </span>
             <span class="badge bg-light text-dark border">{{ tournament.get_format_display }}</span>
           </div>
-          {% if user.is_staff or user.member.role == 'admin' and user.member.association == tournament.association %}
-            <a href="{% url 'tournament_manage' tournament.pk %}" class="btn btn-chess btn-sm">
-              <i class="bi bi-gear"></i> Manage Tournament
-            </a>
-          {% endif %}
+          <div class="d-flex gap-2 flex-wrap">
+            {% if user.is_staff or user.member.role == 'admin' and user.member.association == tournament.association %}
+              <a href="{% url 'tournament_manage' tournament.pk %}" class="btn btn-chess btn-sm">
+                <i class="bi bi-gear"></i> Manage
+              </a>
+            {% endif %}
+            <div class="dropdown">
+              <button class="btn btn-outline-secondary btn-sm dropdown-toggle" data-bs-toggle="dropdown">
+                <i class="bi bi-download"></i> Export
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="{% url 'export_print' tournament.pk %}" target="_blank">🖨 Print / PDF Report</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{% url 'export_standings' tournament.pk %}">📊 Standings CSV</a></li>
+                <li><a class="dropdown-item" href="{% url 'export_pairings' tournament.pk %}">♟ Pairings CSV</a></li>
+              </ul>
+            </div>
+          </div>
         </div>
 
         <h2 class="fw-bold">{{ tournament.name }}</h2>

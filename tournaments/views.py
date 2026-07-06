@@ -315,6 +315,72 @@ def tournament_record_result(request, pk, match_pk):
     return redirect('tournament_manage', pk=pk)
 
 
+def export_standings_csv(request, pk):
+    """Download final standings as CSV."""
+    import csv
+    from django.http import HttpResponse
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    from .services import compute_standings
+    standings = compute_standings(tournament)
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{tournament.name}_standings.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Rank', 'Player', 'Association', 'Score', 'ELO Rating'])
+    for entry in standings:
+        p = entry['player']
+        writer.writerow([
+            entry['rank'],
+            p.user.get_full_name() or p.user.username,
+            p.association.name,
+            entry['score'],
+            p.rating,
+        ])
+    return response
+
+
+def export_pairings_csv(request, pk):
+    """Download all round pairings and results as CSV."""
+    import csv
+    from django.http import HttpResponse
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    rounds = tournament.rounds.prefetch_related(
+        'matches__white_player__user',
+        'matches__black_player__user',
+    ).order_by('number')
+    response = HttpResponse(content_type='text/csv')
+    response['Content-Disposition'] = f'attachment; filename="{tournament.name}_pairings.csv"'
+    writer = csv.writer(response)
+    writer.writerow(['Round', 'Board', 'White', 'Black', 'Result'])
+    for round_obj in rounds:
+        for match in round_obj.matches.order_by('board_number'):
+            writer.writerow([
+                round_obj.number,
+                match.board_number,
+                match.white_player.user.get_full_name() or match.white_player.user.username,
+                match.black_player.user.get_full_name() if match.black_player else 'BYE',
+                match.get_result_display(),
+            ])
+    return response
+
+
+def export_print(request, pk):
+    """Print-friendly full tournament report (browser Print → Save as PDF)."""
+    tournament = get_object_or_404(Tournament.objects.select_related('association'), pk=pk)
+    from .services import compute_standings, compute_crosstable
+    standings  = compute_standings(tournament)
+    crosstable = compute_crosstable(tournament)
+    rounds = tournament.rounds.prefetch_related(
+        'matches__white_player__user',
+        'matches__black_player__user',
+    ).order_by('number')
+    return render(request, 'tournaments/print.html', {
+        'tournament': tournament,
+        'standings': standings,
+        'crosstable': crosstable,
+        'rounds': rounds,
+    })
+
+
 def _can_create(user):
     """True if user may create tournaments."""
     if user.is_staff:
