@@ -95,6 +95,7 @@
             <th class="d-none d-md-table-cell">Association</th>
             <th class="text-center">ELO</th>
             <th style="width:160px;">Role</th>
+            <th class="d-none d-lg-table-cell" style="width:170px;">Coach</th>
             <th class="text-center">Status</th>
             <th class="text-center">Actions</th>
           </tr>
@@ -130,6 +131,28 @@
                   {% endfor %}
                 </select>
               </form>
+            </td>
+
+            <!-- Coach assignment -->
+            <td class="d-none d-lg-table-cell">
+              {% if m.role == 'player' or m.role == 'parent' %}
+              <form method="post" class="d-flex gap-1">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="assign_coach">
+                <input type="hidden" name="member_pk" value="{{ m.pk }}">
+                <select name="coach_pk" class="form-select form-select-sm"
+                        onchange="this.form.submit()" style="min-width:130px;font-size:0.78rem;">
+                  <option value="">— None —</option>
+                  {% for coach in coaches %}
+                  <option value="{{ coach.pk }}" {% if m.coach_id == coach.pk %}selected{% endif %}>
+                    {{ coach.user.get_full_name|default:coach.user.username }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </form>
+              {% else %}
+              <span class="text-muted small">—</span>
+              {% endif %}
             </td>
 
             <!-- Active status badge -->

@@ -34,6 +34,12 @@
         <div class="text-muted small mt-1">
           {{ member.get_role_display }} &middot; {{ member.association.name }}
           &middot; Joined {{ member.joined_at|date:"M Y" }}
+          {% if member.coach %}
+            &middot; Coach:
+            <a href="{% url 'player_profile' member.coach.pk %}" class="text-decoration-none">
+              {{ member.coach.user.get_full_name|default:member.coach.user.username }}
+            </a>
+          {% endif %}
         </div>
         <div class="mt-2">
           <span style="font-size:1.6rem;font-weight:800;color:var(--chess-accent);">

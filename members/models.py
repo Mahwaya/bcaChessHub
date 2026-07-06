@@ -22,6 +22,10 @@ class Member(models.Model):
     is_active = models.BooleanField(default=True)
     joined_at = models.DateTimeField(auto_now_add=True)
 
+    coach = models.ForeignKey(
+        'self', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='coached_players', limit_choices_to={'role': 'coach'}
+    )
     # Parent-child relationship for parental monitoring (from UML)
     parent = models.ForeignKey(
         'self', on_delete=models.SET_NULL, null=True, blank=True,

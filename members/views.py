@@ -81,6 +81,14 @@ def dashboard(request):
     unread_qs.update(is_read=True)
     notifications = unread_qs.order_by('-sent_at')[:5]
 
+    coached_players = None
+    if member.role == 'coach':
+        coached_players = (
+            Member.objects.filter(coach=member, is_active=True)
+            .select_related('user')
+            .order_by('-rating')
+        )
+
     return render(request, 'members/dashboard.html', {
         'member': member,
         'stats': {
@@ -95,6 +103,7 @@ def dashboard(request):
         'recent_matches': all_matches,
         'registrations': registrations,
         'notifications': notifications,
+        'coached_players': coached_players,
     })
 
 
@@ -131,6 +140,17 @@ def manage_members(request):
             target.save(update_fields=['is_active'])
             state = 'activated' if target.is_active else 'deactivated'
             messages.success(request, f'{target} {state}.')
+
+        elif action == 'assign_coach':
+            new_coach_pk = request.POST.get('coach_pk', '').strip()
+            if new_coach_pk:
+                coach = get_object_or_404(base_qs, pk=new_coach_pk, role='coach')
+                target.coach = coach
+            else:
+                target.coach = None
+            target.save(update_fields=['coach'])
+            label = str(target.coach) if target.coach else 'none'
+            messages.success(request, f'{target} coach set to {label}.')
 
         elif action == 'reset_elo':
             if request.user.is_staff:
@@ -212,6 +232,7 @@ def manage_members(request):
     params.pop('page', None)
 
     all_associations = Association.objects.filter(is_active=True) if request.user.is_staff else []
+    coaches = base_qs.filter(role='coach', is_active=True)
 
     return render(request, 'members/manage.html', {
         'members': page_obj,
@@ -224,6 +245,7 @@ def manage_members(request):
         'search': search,
         'can_reset_elo': request.user.is_staff,
         'all_associations': all_associations,
+        'coaches': coaches,
     })
 
 
