@@ -1,4 +1,7 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib import messages
+from django.core.mail import send_mail
+from django.conf import settings
 from .models import Association
 from members.models import Member
 from tournaments.models import Tournament
@@ -63,3 +66,34 @@ def association_detail(request, pk):
         'upcoming_tournaments': upcoming_tournaments,
         'recent_tournaments': recent_tournaments,
     })
+
+
+def association_contact(request, pk):
+    assoc = get_object_or_404(Association, pk=pk, is_active=True)
+
+    if request.method == 'POST':
+        name    = request.POST.get('name', '').strip()
+        email   = request.POST.get('email', '').strip()
+        subject = request.POST.get('subject', '').strip()
+        body    = request.POST.get('body', '').strip()
+
+        if not (name and email and subject and body):
+            messages.error(request, 'Please fill in all fields.')
+        else:
+            full_subject = f'[ChessHub Contact] {subject}'
+            full_body = (
+                f'Message from: {name} <{email}>\n'
+                f'Association page: {assoc.name}\n\n'
+                f'{body}'
+            )
+            send_mail(
+                subject=full_subject,
+                message=full_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[assoc.email],
+                fail_silently=True,
+            )
+            messages.success(request, f'Your message has been sent to {assoc.name}. They will get back to you shortly.')
+            return redirect('association_detail', pk=assoc.pk)
+
+    return render(request, 'associations/contact.html', {'assoc': assoc})

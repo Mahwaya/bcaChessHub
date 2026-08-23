@@ -1,0 +1,114 @@
+{% extends 'base.html' %}
+{% block title %}Contact {{ assoc.name }} — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:680px;">
+
+  <div class="text-muted small mb-3">
+    <a href="{% url 'association_list' %}" class="text-muted">&larr; All Associations</a>
+    &nbsp;/&nbsp;
+    <a href="{% url 'association_detail' assoc.pk %}" class="text-muted">{{ assoc.name }}</a>
+  </div>
+
+  <div class="card p-4">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+      {% if assoc.logo %}
+        <img src="{{ assoc.logo.url }}" alt="{{ assoc.name }}"
+             style="width:52px;height:52px;object-fit:contain;border-radius:8px;flex-shrink:0;">
+      {% else %}
+        <div style="width:52px;height:52px;border-radius:8px;background:var(--chess-dark);
+                    display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0;">
+          ♟
+        </div>
+      {% endif %}
+      <div>
+        <h4 class="fw-bold mb-0">Contact {{ assoc.name }}</h4>
+        <div class="text-muted small">{{ assoc.city }}, {{ assoc.country }}</div>
+      </div>
+    </div>
+
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <label class="form-label small fw-semibold">Your Name <span class="text-danger">*</span></label>
+          <input type="text" name="name" class="form-control" maxlength="100" required
+                 value="{{ request.POST.name|default:'' }}"
+                 placeholder="John Smith">
+        </div>
+        <div class="col-sm-6">
+          <label class="form-label small fw-semibold">Your Email <span class="text-danger">*</span></label>
+          <input type="email" name="email" class="form-control" maxlength="200" required
+                 value="{{ request.POST.email|default:'' }}"
+                 placeholder="john@example.com">
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label class="form-label small fw-semibold">Subject <span class="text-danger">*</span></label>
+        <input type="text" name="subject" class="form-control" maxlength="200" required
+               value="{{ request.POST.subject|default:'' }}"
+               placeholder="e.g. Membership inquiry, Tournament question…">
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label small fw-semibold">Message <span class="text-danger">*</span></label>
+        <textarea name="body" class="form-control" rows="6" required
+                  placeholder="Write your message here…">{{ request.POST.body|default:'' }}</textarea>
+      </div>
+
+      <div class="d-flex gap-3 align-items-center flex-wrap">
+        <button type="submit" class="btn btn-chess">
+          <i class="bi bi-send"></i> Send Message
+        </button>
+        <a href="{% url 'association_detail' assoc.pk %}" class="btn btn-outline-secondary">
+          Cancel
+        </a>
+        {% if assoc.email %}
+        <span class="text-muted small ms-auto">
+          Sent to <strong>{{ assoc.name }}</strong>
+        </span>
+        {% endif %}
+      </div>
+    </form>
+
+  </div>
+
+  {% if assoc.phone or assoc.email or assoc.website %}
+  <div class="card p-4 mt-3">
+    <h6 class="fw-bold mb-3">Other ways to reach us</h6>
+    <div class="d-flex flex-column gap-2" style="font-size:0.88rem;">
+      {% if assoc.email %}
+      <div>
+        <i class="bi bi-envelope text-muted me-2"></i>
+        <a href="mailto:{{ assoc.email }}" class="text-decoration-none">{{ assoc.email }}</a>
+      </div>
+      {% endif %}
+      {% if assoc.phone %}
+      <div>
+        <i class="bi bi-telephone text-muted me-2"></i>
+        <span>{{ assoc.phone }}</span>
+      </div>
+      {% endif %}
+      {% if assoc.website %}
+      <div>
+        <i class="bi bi-globe text-muted me-2"></i>
+        <a href="{{ assoc.website }}" target="_blank" rel="noopener" class="text-decoration-none">
+          {{ assoc.website }}
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}
