@@ -439,7 +439,8 @@ def verify_2fa(request):
         totp = pyotp.TOTP(request.user.member.totp_secret)
         if totp.verify(code, valid_window=1):
             request.session['2fa_verified'] = True
-            return redirect(request.POST.get('next', request.GET.get('next', 'dashboard')))
+            next_url = request.POST.get('next') or request.GET.get('next') or 'dashboard'
+            return redirect(next_url)
         messages.error(request, 'Invalid code. Please try again.')
 
     return render(request, 'members/2fa_verify.html', {

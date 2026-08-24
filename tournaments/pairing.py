@@ -154,7 +154,11 @@ def generate_pairings(tournament, round_number):
         matched = False
 
         # Try to pair p1 with the aligned bot_half player first, then others
-        candidates = [bot_half[i]] + [bot_half[j] for j in range(len(bot_half)) if j != i]
+        # Filter None sentinels — they mark already-paired players this round
+        candidates = [
+            p for p in [bot_half[i]] + [bot_half[j] for j in range(len(bot_half)) if j != i]
+            if p is not None
+        ]
 
         for p2 in candidates:
             p2_idx = bot_half.index(p2)
