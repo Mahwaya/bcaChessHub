@@ -422,6 +422,99 @@ def change_password(request):
     return render(request, 'members/change_password.html', {'form': form})
 
 
+# ── Two-Factor Authentication ──────────────────────────────────────────────
+
+def verify_2fa(request):
+    """Post-login TOTP verification page."""
+    if not request.user.is_authenticated:
+        return redirect('login')
+    if not hasattr(request.user, 'member') or not request.user.member.totp_enabled:
+        return redirect('dashboard')
+    if request.session.get('2fa_verified'):
+        return redirect(request.GET.get('next', 'dashboard'))
+
+    if request.method == 'POST':
+        import pyotp
+        code = request.POST.get('code', '').replace(' ', '')
+        totp = pyotp.TOTP(request.user.member.totp_secret)
+        if totp.verify(code, valid_window=1):
+            request.session['2fa_verified'] = True
+            return redirect(request.POST.get('next', request.GET.get('next', 'dashboard')))
+        messages.error(request, 'Invalid code. Please try again.')
+
+    return render(request, 'members/2fa_verify.html', {
+        'next': request.GET.get('next', ''),
+    })
+
+
+@login_required
+def setup_2fa(request):
+    """Enable 2FA: generate secret, show QR, confirm with first code."""
+    import pyotp, qrcode, io, base64
+
+    member = request.user.member
+
+    if request.method == 'POST':
+        action = request.POST.get('action')
+
+        if action == 'generate':
+            secret = pyotp.random_base32()
+            request.session['pending_totp_secret'] = secret
+            return redirect('setup_2fa')
+
+        if action == 'confirm':
+            secret = request.session.get('pending_totp_secret')
+            code   = request.POST.get('code', '').replace(' ', '')
+            if not secret:
+                messages.error(request, 'Session expired. Please start again.')
+                return redirect('setup_2fa')
+            totp = pyotp.TOTP(secret)
+            if totp.verify(code, valid_window=1):
+                member.totp_secret  = secret
+                member.totp_enabled = True
+                member.save(update_fields=['totp_secret', 'totp_enabled'])
+                request.session.pop('pending_totp_secret', None)
+                request.session['2fa_verified'] = True
+                messages.success(request, '2FA enabled. Your account is now protected.')
+                return redirect('dashboard')
+            messages.error(request, 'Code did not match. Try scanning again or wait for the next code.')
+
+    secret = request.session.get('pending_totp_secret')
+    qr_b64 = None
+
+    if secret:
+        label = request.user.email or request.user.username
+        uri   = pyotp.TOTP(secret).provisioning_uri(name=label, issuer_name='ChessHub')
+        img   = qrcode.make(uri)
+        buf   = io.BytesIO()
+        img.save(buf, format='PNG')
+        qr_b64 = base64.b64encode(buf.getvalue()).decode()
+
+    return render(request, 'members/2fa_setup.html', {
+        'member':      member,
+        'secret':      secret,
+        'qr_b64':      qr_b64,
+    })
+
+
+@login_required
+def disable_2fa(request):
+    """Disable 2FA after password confirmation."""
+    if request.method == 'POST':
+        password = request.POST.get('password', '')
+        if request.user.check_password(password):
+            member = request.user.member
+            member.totp_enabled = False
+            member.totp_secret  = ''
+            member.save(update_fields=['totp_enabled', 'totp_secret'])
+            request.session.pop('2fa_verified', None)
+            messages.success(request, '2FA has been disabled.')
+            return redirect('dashboard')
+        messages.error(request, 'Incorrect password.')
+
+    return render(request, 'members/2fa_disable.html')
+
+
 @login_required
 def edit_profile(request):
     if not hasattr(request.user, 'member'):

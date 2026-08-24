@@ -33,6 +33,13 @@
           <a href="{% url 'change_password' %}" class="btn btn-outline-secondary btn-sm" style="font-size:0.75rem;">
             🔑 Password
           </a>
+          <a href="{% url 'setup_2fa' %}" class="btn btn-outline-secondary btn-sm position-relative" style="font-size:0.75rem;">
+            🛡 2FA
+            {% if not member.totp_enabled %}
+              <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-warning text-dark"
+                    style="font-size:0.5rem;">OFF</span>
+            {% endif %}
+          </a>
           <a href="{% url 'challenge_list' %}" class="btn btn-outline-secondary btn-sm position-relative" style="font-size:0.75rem;">
             ⚔ Challenges
             {% with pending=member.challenges_received.all %}

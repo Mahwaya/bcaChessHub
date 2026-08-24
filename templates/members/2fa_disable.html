@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% block title %}Disable Two-Factor Authentication — ChessHub{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5" style="max-width:440px;">
+
+  <div class="text-muted small mb-3">
+    <a href="{% url 'dashboard' %}" class="text-muted">&larr; Dashboard</a>
+  </div>
+
+  <div class="card p-4">
+
+    <div class="text-center mb-4">
+      <div style="font-size:2.4rem;">⚠️</div>
+      <h4 class="fw-bold mt-2 mb-1">Disable 2FA</h4>
+      <p class="text-muted small mb-0">
+        Removing two-factor authentication makes your account less secure.
+        Confirm your password to proceed.
+      </p>
+    </div>
+
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+      {{ msg }}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+
+    <form method="post" novalidate>
+      {% csrf_token %}
+
+      <div class="mb-4">
+        <label class="form-label small fw-semibold">Current Password <span class="text-danger">*</span></label>
+        <input type="password" name="password" class="form-control" required autofocus
+               placeholder="Enter your password to confirm">
+      </div>
+
+      <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-danger">Disable 2FA</button>
+        <a href="{% url 'dashboard' %}" class="btn btn-outline-secondary">Cancel</a>
+      </div>
+    </form>
+
+  </div>
+</div>
+{% endblock %}

@@ -9,3 +9,5 @@ paynow>=1.0.8
 gunicorn>=21.2
 whitenoise>=6.6
 dj-database-url>=2.1
+pyotp>=2.9
+qrcode[pil]>=7.4
