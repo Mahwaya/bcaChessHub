@@ -4,6 +4,7 @@ from django.contrib.auth import login, update_session_auth_hash
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db.models import Q
+import time
 from .models import Member, RatingHistory
 from .forms import SignupForm, ProfileEditForm
 from associations.models import Association
@@ -435,13 +436,31 @@ def verify_2fa(request):
 
     if request.method == 'POST':
         import pyotp
+        locked_until = request.session.get('2fa_locked_until', 0)
+        if time.time() < locked_until:
+            wait = int(locked_until - time.time())
+            messages.error(request, f'Too many failed attempts. Try again in {wait}s.')
+            return render(request, 'members/2fa_verify.html', {
+                'next': request.GET.get('next', ''),
+            })
+
         code = request.POST.get('code', '').replace(' ', '')
         totp = pyotp.TOTP(request.user.member.totp_secret)
         if totp.verify(code, valid_window=1):
             request.session['2fa_verified'] = True
+            request.session.pop('2fa_attempts', None)
+            request.session.pop('2fa_locked_until', None)
             next_url = request.POST.get('next') or request.GET.get('next') or 'dashboard'
             return redirect(next_url)
-        messages.error(request, 'Invalid code. Please try again.')
+
+        attempts = request.session.get('2fa_attempts', 0) + 1
+        if attempts >= 5:
+            request.session['2fa_attempts'] = 0
+            request.session['2fa_locked_until'] = time.time() + 60
+            messages.error(request, 'Too many failed attempts. Try again in 60s.')
+        else:
+            request.session['2fa_attempts'] = attempts
+            messages.error(request, 'Invalid code. Please try again.')
 
     return render(request, 'members/2fa_verify.html', {
         'next': request.GET.get('next', ''),

@@ -6,6 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ── Core ──────────────────────────────────────────────────────────────────────
 import os
+import sys
 
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-g4o@whz0=p=nl7+@*emd*lszg+$#$_8@%vr%6qem-jd2h32@uy')
 DEBUG = config('DEBUG', default=True, cast=bool)
@@ -88,6 +89,12 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LOGIN_REDIRECT_URL = '/dashboard/'
 LOGOUT_REDIRECT_URL = '/'
+
+# Tests create many Users; the default PBKDF2 hasher's deliberate slowness
+# (the whole point of it in production) makes the suite take minutes for
+# no benefit in a throwaway test DB — swap to a fast hasher during `test` only.
+if 'test' in sys.argv:
+    PASSWORD_HASHERS = ['django.contrib.auth.hashers.MD5PasswordHasher']
 
 # ── i18n ──────────────────────────────────────────────────────────────────────
 LANGUAGE_CODE = 'en-us'
