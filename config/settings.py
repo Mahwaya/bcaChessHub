@@ -1,5 +1,6 @@
 from pathlib import Path
 from decouple import config, Csv
+from django.core.exceptions import ImproperlyConfigured
 import dj_database_url
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -8,9 +9,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 import os
 import sys
 
-SECRET_KEY = config('SECRET_KEY', default='django-insecure-g4o@whz0=p=nl7+@*emd*lszg+$#$_8@%vr%6qem-jd2h32@uy')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-local-development-key-not-for-production')
 DEBUG = config('DEBUG', default=True, cast=bool)
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,testserver', cast=Csv())
+
+# The default above exists only so local dev works without a .env file.
+# Refuse to boot in production rather than silently signing sessions and
+# password-reset tokens with a key that is public in the GitHub repo.
+if not DEBUG and SECRET_KEY.startswith('django-insecure-'):
+    raise ImproperlyConfigured(
+        'SECRET_KEY is unset in production. Set a real SECRET_KEY environment variable.'
+    )
 
 # Railway auto-injects these — add them automatically
 for _var in ('RAILWAY_PUBLIC_DOMAIN', 'RAILWAY_PRIVATE_DOMAIN'):
